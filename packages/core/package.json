@@ -1,0 +1,33 @@
+{
+  "name": "@typesensekit/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "typesense": "^3.0.6",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "@types/node": "^22.10.0"
+  },
+  "description": "Private operation registry shared by the TypesenseKit packages.",
+  "license": "MIT"
+}

@@ -1,0 +1,21 @@
+import { describe, expect, it } from "vitest";
+import { operations } from "./index.js";
+
+describe("operation registry", () => {
+  it("has unique operation names across the Typesense API surfaces", () => {
+    const names = operations.map((operation) => operation.name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "collections.create",
+        "documents.search",
+        "multi_search",
+        "keys.create",
+        "analytics.events.create",
+        "conversations.models.create",
+        "api.call",
+        "health",
+      ]),
+    );
+  });
+});

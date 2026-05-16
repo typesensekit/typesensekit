@@ -1,0 +1,60 @@
+{
+  "name": "@typesensekit/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "bin": {
+    "typesensekit": "dist/cli.js",
+    "tsk": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "citty": "^0.2.2",
+    "env-paths": "^4.0.0",
+    "zod": "^3.25.76",
+    "typesense": "^3.0.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.5.1",
+    "@typesensekit/core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Typesense API CLI with profile management and agent skill snippets.",
+  "license": "MIT",
+  "author": "Akshit Kr Nagpal",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akshitkrnagpal/typesensekit.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/akshitkrnagpal/typesensekit/issues"
+  },
+  "homepage": "https://github.com/akshitkrnagpal/typesensekit#readme",
+  "keywords": [
+    "typesense",
+    "cli",
+    "mcp",
+    "model-context-protocol",
+    "search"
+  ]
+}

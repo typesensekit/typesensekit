@@ -1,0 +1,58 @@
+{
+  "name": "@typesensekit/mcp",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "bin": {
+    "typesensekit-mcp": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76",
+    "typesense": "^3.0.6"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "@types/node": "^22.10.0",
+    "@typesensekit/core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "MCP stdio server exposing Typesense API operations as tools.",
+  "license": "MIT",
+  "author": "Akshit Kr Nagpal",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akshitkrnagpal/typesensekit.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/akshitkrnagpal/typesensekit/issues"
+  },
+  "homepage": "https://github.com/akshitkrnagpal/typesensekit#readme",
+  "keywords": [
+    "typesense",
+    "cli",
+    "mcp",
+    "model-context-protocol",
+    "search"
+  ]
+}
