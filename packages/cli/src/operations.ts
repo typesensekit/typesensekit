@@ -1,4 +1,4 @@
-import { operations } from "@typesensekit/core";
+import { getTypesenseErrorHint, operations } from "@typesensekit/core";
 import { defineCommand } from "citty";
 import { parseInput, render } from "./output.js";
 import { resolveClient } from "./profile/resolve.js";
@@ -24,8 +24,16 @@ export function operationCommands() {
             config: args.config,
           });
           const input = operation.input.parse(parseInput(args.input));
-          const result = await operation.execute(client, input);
-          console.log(render(result, args.json));
+          try {
+            const result = await operation.execute(client, input);
+            console.log(render(result, args.json));
+          } catch (error) {
+            const hint = getTypesenseErrorHint(error, input);
+            if (!hint) throw error;
+            const message =
+              error instanceof Error ? error.message : String(error);
+            throw new Error(`${message}\n\n${hint}`);
+          }
         },
       }),
     ]),

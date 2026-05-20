@@ -1,11 +1,14 @@
+import { redactSecrets } from "@typesensekit/core";
+
 export function render(value: unknown, json = false): string {
+  const safeValue = redactSecrets(value);
   if (json || typeof value !== "object" || value === null) {
-    return JSON.stringify(value, null, 2);
+    return JSON.stringify(safeValue, null, 2);
   }
   if (Array.isArray(value)) {
-    return JSON.stringify(value, null, 2);
+    return JSON.stringify(safeValue, null, 2);
   }
-  return JSON.stringify(value, null, 2);
+  return JSON.stringify(safeValue, null, 2);
 }
 
 export function parseInput(raw: string | undefined): Record<string, unknown> {

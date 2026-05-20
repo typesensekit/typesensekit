@@ -44,3 +44,65 @@ export function normalizeTypesenseError(
 
   return { code: "TypesenseError", message: String(error) };
 }
+
+type ErrorHintContext = {
+  collection?: unknown;
+  fields?: unknown;
+};
+
+function getFieldNames(fields: unknown): string[] {
+  if (!Array.isArray(fields)) return [];
+  return fields
+    .map((field) => {
+      if (typeof field !== "object" || field === null) return undefined;
+      const name = (field as { name?: unknown }).name;
+      return typeof name === "string" ? name : undefined;
+    })
+    .filter((name): name is string => Boolean(name));
+}
+
+export function getTypesenseErrorHint(
+  error: unknown,
+  context: ErrorHintContext = {},
+): string | undefined {
+  const { message } = normalizeTypesenseError(error);
+  const collection =
+    typeof context.collection === "string" ? context.collection : undefined;
+  const [field] = getFieldNames(context.fields);
+
+  if (
+    /already part of the schema/i.test(message) &&
+    /drop it first/i.test(message)
+  ) {
+    if (collection && field) {
+      return [
+        "Typesense does not allow changing this field in place. Drop and re-add it:",
+        "",
+        `tsk collections.fields.drop --collection ${collection} --field ${field}`,
+        `tsk collections.wait --collection ${collection} --field-missing ${field}`,
+        `tsk collections.fields.add --collection ${collection} --input field.json`,
+      ].join("\n");
+    }
+
+    return "Typesense does not allow changing this field in place. Drop the existing field, wait until it is missing, then add the replacement definition.";
+  }
+
+  if (
+    /another collection update operation is in progress/i.test(message) ||
+    /timeout of \d+ms exceeded/i.test(message) ||
+    /econnaborted/i.test(message)
+  ) {
+    if (collection && field) {
+      return [
+        "A collection schema update may still be applying. Wait for the expected field state before retrying:",
+        "",
+        `tsk collections.wait --collection ${collection} --field-present ${field}`,
+        `tsk collections.wait --collection ${collection} --field-missing ${field}`,
+      ].join("\n");
+    }
+
+    return "A collection schema update may still be applying. Use collections.wait to poll the expected schema state before retrying.";
+  }
+
+  return undefined;
+}

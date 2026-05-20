@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createClient, operations } from "@typesensekit/core";
+import { createClient, operations, redactSecrets } from "@typesensekit/core";
 import type { z } from "zod";
 import { readEnvConfig } from "./env.js";
 
@@ -27,7 +27,12 @@ export function createTypesenseMcpServer() {
           const input = operation.input.parse(args);
           const result = await operation.execute(client, input);
           return {
-            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(redactSecrets(result), null, 2),
+              },
+            ],
           };
         } catch (error) {
           const message =

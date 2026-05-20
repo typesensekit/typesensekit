@@ -2,16 +2,26 @@ import { z } from "zod";
 import { api, collectionPath } from "./http.js";
 import type { Operation } from "./types.js";
 
-const fieldSchema = z.object({
-  name: z.string(),
+const baseFieldSchema = z
+  .object({
+    name: z.string(),
+    facet: z.boolean().optional(),
+    index: z.boolean().optional(),
+    optional: z.boolean().optional(),
+    sort: z.boolean().optional(),
+    locale: z.string().optional(),
+    infix: z.boolean().optional(),
+    stem: z.boolean().optional(),
+  })
+  .passthrough();
+
+const createFieldSchema = baseFieldSchema.extend({
   type: z.string(),
-  facet: z.boolean().optional(),
-  index: z.boolean().optional(),
-  optional: z.boolean().optional(),
-  sort: z.boolean().optional(),
-  locale: z.string().optional(),
-  infix: z.boolean().optional(),
-  stem: z.boolean().optional(),
+});
+
+const patchFieldSchema = baseFieldSchema.extend({
+  type: z.string().optional(),
+  drop: z.boolean().optional(),
 });
 
 export const collectionOperations = [
@@ -21,7 +31,7 @@ export const collectionOperations = [
     category: "collections",
     input: z.object({
       name: z.string(),
-      fields: z.array(fieldSchema),
+      fields: z.array(createFieldSchema),
       default_sorting_field: z.string().optional(),
       token_separators: z.array(z.string()).optional(),
       symbols_to_index: z.array(z.string()).optional(),
@@ -50,7 +60,7 @@ export const collectionOperations = [
     category: "collections",
     input: z.object({
       collection: z.string(),
-      fields: z.array(fieldSchema).optional(),
+      fields: z.array(patchFieldSchema).optional(),
     }),
     execute: async (client, input) =>
       api(client).patch(collectionPath(input.collection), {

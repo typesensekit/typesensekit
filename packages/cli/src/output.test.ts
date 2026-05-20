@@ -15,4 +15,18 @@ describe("cli output", () => {
   it("renders JSON", () => {
     expect(render({ ok: true }, true)).toBe('{\n  "ok": true\n}');
   });
+
+  it("redacts secret keys in rendered output", () => {
+    expect(
+      render({
+        embed: {
+          model_config: {
+            api_key: "sk-real",
+          },
+        },
+      }),
+    ).toBe(
+      '{\n  "embed": {\n    "model_config": {\n      "api_key": "[REDACTED]"\n    }\n  }\n}',
+    );
+  });
 });
