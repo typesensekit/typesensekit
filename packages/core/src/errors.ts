@@ -47,10 +47,16 @@ export function normalizeTypesenseError(
 
 type ErrorHintContext = {
   collection?: unknown;
+  field?: unknown;
   fields?: unknown;
+  name?: unknown;
 };
 
-function getFieldNames(fields: unknown): string[] {
+function getFieldNames(context: ErrorHintContext): string[] {
+  if (typeof context.field === "string") return [context.field];
+  if (typeof context.name === "string") return [context.name];
+
+  const { fields } = context;
   if (!Array.isArray(fields)) return [];
   return fields
     .map((field) => {
@@ -68,7 +74,7 @@ export function getTypesenseErrorHint(
   const { message } = normalizeTypesenseError(error);
   const collection =
     typeof context.collection === "string" ? context.collection : undefined;
-  const [field] = getFieldNames(context.fields);
+  const [field] = getFieldNames(context);
 
   if (
     /already part of the schema/i.test(message) &&
