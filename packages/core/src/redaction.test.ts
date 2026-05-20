@@ -31,4 +31,29 @@ describe("redactSecrets", () => {
       secret: "[REDACTED]",
     });
   });
+
+  it("redacts generated Typesense API key values", () => {
+    expect(
+      redactSecrets({
+        id: 1,
+        description: "search-only",
+        actions: ["documents:search"],
+        collections: ["products"],
+        value: "generated-key-only-returned-once",
+      }),
+    ).toEqual({
+      id: 1,
+      description: "search-only",
+      actions: ["documents:search"],
+      collections: ["products"],
+      value: "[REDACTED]",
+    });
+  });
+
+  it("does not redact unrelated value fields globally", () => {
+    expect(redactSecrets({ value: "visible", label: "example" })).toEqual({
+      value: "visible",
+      label: "example",
+    });
+  });
 });
