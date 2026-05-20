@@ -1,40 +1,28 @@
 # TypesenseKit
 
-TypesenseKit is a pnpm monorepo for Typesense automation. It ships two public packages:
+![TypesenseKit GitHub hero banner](./assets/github-hero.png)
 
-- `@typesensekit/cli`, a human-friendly CLI for Typesense Admin API operations, profile management, and agent skill snippets.
-- `@typesensekit/mcp`, an MCP stdio server that exposes the same Typesense operations as tools.
+[![CI](https://github.com/akshitkrnagpal/typesensekit/actions/workflows/ci.yml/badge.svg)](https://github.com/akshitkrnagpal/typesensekit/actions/workflows/ci.yml)
 
-`@typesensekit/core` is a private workspace package that owns the shared Typesense client and operation registry.
+TypesenseKit is the developer toolkit for operating Typesense from terminals and AI agents. It gives you one typed operation registry, a human-friendly CLI, and an MCP stdio server over the same Typesense Admin API surface.
 
-## API coverage
+Use it when you want repeatable Typesense automation without rebuilding small scripts for every collection, import, search, schema update, or agent workflow.
 
-The shared registry covers the main Typesense API surfaces and includes a raw `api.call` escape hatch for new or uncommon endpoints:
+## What You Get
 
-- Collections and collection schema updates
-- Documents: index, upsert, get, update, delete, import, export, search
-- Search and multi-search
-- Aliases
-- Synonyms
-- Overrides
-- Stopwords
-- Presets
-- API keys
-- Analytics rules and analytics events
-- Conversations models and history
-- Health, metrics, stats, and debug endpoints
-- Raw HTTP calls through `api.call`
+- `@typesensekit/cli`: a `tsk` command for profile-aware Typesense operations, raw API calls, and agent config snippets.
+- `@typesensekit/mcp`: an MCP stdio server that exposes Typesense operations as tools for compatible agents.
+- `@typesensekit/core`: the private shared client, operation registry, validation layer, and redaction utilities used by both public packages.
 
-## Install
+## Quick Start
+
+Install the CLI:
 
 ```sh
 pnpm add -g @typesensekit/cli
-pnpm dlx @typesensekit/mcp
 ```
 
-## CLI
-
-Configure a profile:
+Create and use a profile:
 
 ```sh
 tsk profile add local --url http://localhost:8108 --api-key xyz
@@ -42,30 +30,21 @@ tsk profile use local
 tsk collections.list --input '{}'
 ```
 
-Or use env vars instead of a saved profile:
+Or run without a saved profile:
 
 ```sh
 TYPESENSE_URL=http://localhost:8108 TYPESENSE_API_KEY=xyz tsk health --input '{}'
 ```
 
-List operations:
+List every supported operation:
 
 ```sh
 tsk operations
 ```
 
-Generate integration snippets:
+## MCP Server
 
-```sh
-tsk skills mcp
-tsk skills claude-desktop
-tsk skills claude-code
-tsk skills hermes
-```
-
-## MCP
-
-Run the stdio server:
+Run the MCP stdio server directly:
 
 ```sh
 TYPESENSE_URL=http://localhost:8108 TYPESENSE_API_KEY=xyz pnpm dlx @typesensekit/mcp
@@ -88,6 +67,41 @@ Claude Desktop example:
 }
 ```
 
+Generate copy-ready integration snippets from the CLI:
+
+```sh
+tsk skills mcp
+tsk skills claude-desktop
+tsk skills claude-code
+tsk skills hermes
+```
+
+## API Coverage
+
+TypesenseKit covers the common Typesense administration and search surfaces, plus `api.call` for endpoints that are new, uncommon, or not yet wrapped.
+
+| Area | Operations |
+| --- | --- |
+| Collections | list, get, create, update, delete, schema changes |
+| Documents | index, upsert, get, update, delete, import, export, search |
+| Search | search, multi-search |
+| Configuration | aliases, synonyms, overrides, stopwords, presets |
+| Access | API keys |
+| Analytics | rules and events |
+| Conversations | models and history |
+| System | health, metrics, stats, debug |
+| Escape hatch | raw HTTP calls through `api.call` |
+
+## Why It Exists
+
+Typesense work often jumps between dashboards, one-off scripts, local curl commands, and agent experiments. TypesenseKit keeps those workflows on one command and one tool registry:
+
+- Use the same operation names from the CLI and MCP server.
+- Keep API keys out of command history with saved profiles or environment variables.
+- Get structured input validation before requests hit Typesense.
+- Redact secrets in error output.
+- Fall back to raw API calls when Typesense ships faster than the wrappers.
+
 ## Development
 
 ```sh
@@ -105,15 +119,34 @@ docker run -p 8108:8108 \
   typesense/typesense:27.1 --enable-cors
 ```
 
-## Publishing
+Useful scripts:
 
-The repo starts private. Publish packages publicly with changesets once the code is ready:
+```sh
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm pack:dry
+```
+
+## Repository Assets
+
+- README banner: [`assets/github-hero.png`](./assets/github-hero.png)
+- GitHub social preview image: [`assets/github-og.png`](./assets/github-og.png)
+
+Use `assets/github-og.png` as the repository social preview in GitHub settings.
+
+## Releasing
 
 ```sh
 pnpm changeset
 pnpm changeset version
 pnpm release
 ```
+
+## Contributing
+
+Read [`CONTRIBUTING.md`](./CONTRIBUTING.md) for setup, development rules, and release notes.
 
 ## License
 
