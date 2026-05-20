@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseInput, render } from "./output.js";
 
@@ -10,6 +13,17 @@ describe("cli output", () => {
 
   it("rejects non-object input", () => {
     expect(() => parseInput("[]")).toThrow("JSON object");
+  });
+
+  it("parses object input from a JSON file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "typesensekit-"));
+    const file = join(dir, "field.json");
+    writeFileSync(file, '{"name":"title_embedding","type":"float[]"}');
+
+    expect(parseInput(file)).toEqual({
+      name: "title_embedding",
+      type: "float[]",
+    });
   });
 
   it("renders JSON", () => {

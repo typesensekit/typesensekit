@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { redactSecrets } from "@typesensekit/core";
 
 export function render(value: unknown, json = false): string {
@@ -13,7 +14,12 @@ export function render(value: unknown, json = false): string {
 
 export function parseInput(raw: string | undefined): Record<string, unknown> {
   if (!raw) return {};
-  const parsed = JSON.parse(raw) as unknown;
+  const source = raw.trim();
+  const input =
+    source.startsWith("{") || source.startsWith("[")
+      ? source
+      : readFileSync(source, "utf8");
+  const parsed = JSON.parse(input) as unknown;
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("--input must be a JSON object");
   }
