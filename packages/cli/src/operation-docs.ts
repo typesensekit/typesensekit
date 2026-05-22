@@ -64,10 +64,10 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   ],
   "documents.search": [
     {
-      collection: "products",
+      collection: "production__products",
       params: {
-        q: "chair",
-        query_by: "title,description",
+        q: "*",
+        query_by: "q",
       },
     },
   ],

@@ -38,7 +38,7 @@ describe("operation docs", () => {
 
   it("renders command-specific examples for common operations", () => {
     expect(renderOperationExamples("documents.search")).toContain(
-      `tsk documents.search --input '{"collection":"products","params":{"q":"chair","query_by":"title,description"}}' --json`,
+      `tsk documents.search --input '{"collection":"production__products","params":{"q":"*","query_by":"q"}}' --json`,
     );
     expect(renderOperationExamples("presets.create")).toContain(
       `tsk presets.create --input '{"name":"Semantic","value":{"query_by":"title_embedding"}}' --json`,
