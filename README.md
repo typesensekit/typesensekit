@@ -105,6 +105,13 @@ TypesenseKit covers the common Typesense administration and search surfaces, plu
 | System | health, metrics, stats, debug |
 | Escape hatch | raw HTTP calls through `api.call` |
 
+Typesense v30 global synonym sets are available through `synonym_sets.*`:
+
+```sh
+tsk synonym_sets.list --input '{}' --json
+tsk synonym_sets.items.list --input '{"name":"products-core"}' --json
+```
+
 ## Why It Exists
 
 Typesense work often jumps between dashboards, one-off scripts, local curl commands, and agent experiments. TypesenseKit keeps those workflows on one command and one tool registry:

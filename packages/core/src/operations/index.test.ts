@@ -17,6 +17,8 @@ describe("operation registry", () => {
         "collections.fields.add",
         "collections.fields.drop",
         "collections.fields.replace",
+        "synonym_sets.list",
+        "synonym_sets.items.list",
         "api.call",
         "health",
       ]),

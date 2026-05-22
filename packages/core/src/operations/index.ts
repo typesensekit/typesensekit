@@ -9,6 +9,7 @@ import { overridesOperations } from "./overrides.js";
 import { presetsOperations } from "./presets.js";
 import { searchOperations } from "./search.js";
 import { stopwordsOperations } from "./stopwords.js";
+import { synonymSetOperations } from "./synonym-sets.js";
 import { synonymsOperations } from "./synonyms.js";
 import { systemOperations } from "./system.js";
 import type { Operation } from "./types.js";
@@ -19,6 +20,7 @@ export const operations = [
   ...searchOperations,
   ...aliasesOperations,
   ...synonymsOperations,
+  ...synonymSetOperations,
   ...overridesOperations,
   ...keysOperations,
   ...analyticsOperations,

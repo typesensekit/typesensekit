@@ -87,8 +87,22 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   "synonyms.create": [
     {
       collection: "products",
-      id: "sofa-couch",
-      synonyms: ["sofa", "couch"],
+      name: "sofa-couch",
+      value: { synonyms: ["sofa", "couch"] },
+    },
+  ],
+  "synonym_sets.list": [{}],
+  "synonym_sets.create": [
+    {
+      name: "products-core",
+      value: {
+        items: [{ id: "sofa-couch", synonyms: ["sofa", "couch"] }],
+      },
+    },
+  ],
+  "synonym_sets.items.list": [
+    {
+      name: "products-core",
     },
   ],
 };
