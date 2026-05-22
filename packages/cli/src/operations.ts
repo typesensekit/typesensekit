@@ -100,6 +100,10 @@ export function operationCommands() {
           profile: { type: "string", description: "Profile name" },
           config: { type: "string", description: "Profile config path" },
           json: { type: "boolean", description: "Print JSON" },
+          debug: {
+            type: "boolean",
+            description: "Include redacted diagnostic details in errors",
+          },
           ...operationSpecificArgs(operation.name),
         },
         async run({ args }) {
@@ -116,7 +120,9 @@ export function operationCommands() {
             console.log(render(result, args.json));
           } catch (error) {
             const hint = getTypesenseErrorHint(error, input);
-            const message = formatTypesenseErrorMessage(error);
+            const message = formatTypesenseErrorMessage(error, {
+              debug: args.debug,
+            });
             throw new Error(hint ? `${message}\n\n${hint}` : message);
           }
         },
