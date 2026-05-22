@@ -24,10 +24,9 @@ export const presetsOperations = [
       value: z.record(z.unknown()),
     }),
     execute: async (client, input) =>
-      api(client).put(
-        `${base(input.collection)}/${enc(input.name)}`,
-        input.value,
-      ),
+      api(client).put(`${base(input.collection)}/${enc(input.name)}`, {
+        value: input.value,
+      }),
   },
   {
     name: "presets.retrieve",
