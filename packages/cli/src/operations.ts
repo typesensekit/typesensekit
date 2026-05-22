@@ -4,6 +4,10 @@ import {
   operations,
 } from "@typesensekit/core";
 import { defineCommand } from "citty";
+import {
+  renderInputSchema,
+  renderOperationExamples,
+} from "./operation-docs.js";
 import { parseInput, render } from "./output.js";
 import { resolveClient } from "./profile/resolve.js";
 
@@ -97,6 +101,14 @@ export function operationCommands() {
             type: "string",
             description: "JSON object matching this operation input schema",
           },
+          schema: {
+            type: "boolean",
+            description: "Print this operation input schema",
+          },
+          examples: {
+            type: "boolean",
+            description: "Print example invocations for this operation",
+          },
           profile: { type: "string", description: "Profile name" },
           config: { type: "string", description: "Profile config path" },
           json: { type: "boolean", description: "Print JSON" },
@@ -107,6 +119,15 @@ export function operationCommands() {
           ...operationSpecificArgs(operation.name),
         },
         async run({ args }) {
+          if (args.schema) {
+            console.log(renderInputSchema(operation.input));
+            return;
+          }
+          if (args.examples) {
+            console.log(renderOperationExamples(operation.name));
+            return;
+          }
+
           const client = await resolveClient({
             profile: args.profile,
             config: args.config,
