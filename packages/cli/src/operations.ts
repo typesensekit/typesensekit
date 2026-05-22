@@ -1,4 +1,8 @@
-import { getTypesenseErrorHint, operations } from "@typesensekit/core";
+import {
+  formatTypesenseErrorMessage,
+  getTypesenseErrorHint,
+  operations,
+} from "@typesensekit/core";
 import { defineCommand } from "citty";
 import { parseInput, render } from "./output.js";
 import { resolveClient } from "./profile/resolve.js";
@@ -112,10 +116,8 @@ export function operationCommands() {
             console.log(render(result, args.json));
           } catch (error) {
             const hint = getTypesenseErrorHint(error, input);
-            if (!hint) throw error;
-            const message =
-              error instanceof Error ? error.message : String(error);
-            throw new Error(`${message}\n\n${hint}`);
+            const message = formatTypesenseErrorMessage(error);
+            throw new Error(hint ? `${message}\n\n${hint}` : message);
           }
         },
       }),

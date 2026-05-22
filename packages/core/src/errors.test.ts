@@ -1,5 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { getTypesenseErrorHint } from "./errors.js";
+import {
+  formatTypesenseErrorMessage,
+  getTypesenseErrorHint,
+  normalizeTypesenseError,
+} from "./errors.js";
+
+describe("normalizeTypesenseError", () => {
+  it("redacts secrets from messages and nested details", () => {
+    const error = new Error("Authorization: Bearer message-token");
+    Object.assign(error, {
+      config: {
+        apiKey: "config-key",
+        headers: { "X-TYPESENSE-API-KEY": "header-key" },
+      },
+    });
+
+    const normalized = normalizeTypesenseError(error);
+
+    expect(normalized.message).toBe("Authorization: [REDACTED]");
+    expect(normalized.details).toMatchObject({
+      config: {
+        apiKey: "[REDACTED]",
+        headers: { "X-TYPESENSE-API-KEY": "[REDACTED]" },
+      },
+    });
+    expect(JSON.stringify(normalized)).not.toContain("config-key");
+    expect(JSON.stringify(normalized)).not.toContain("header-key");
+    expect(formatTypesenseErrorMessage(error)).toBe(
+      "Authorization: [REDACTED]",
+    );
+  });
+});
 
 describe("getTypesenseErrorHint", () => {
   it("adds drop and wait guidance when a field is already in the schema", () => {

@@ -1,3 +1,5 @@
+import { redactSecrets, redactText } from "./redaction.js";
+
 export type NormalizedTypesenseError = {
   code: string;
   message: string;
@@ -22,8 +24,8 @@ export function normalizeTypesenseError(
         typeof status === "number"
           ? String(status)
           : error.name || "TypesenseError",
-      message: error.message,
-      details: error,
+      message: redactText(error.message),
+      details: redactSecrets(error),
     };
   }
 
@@ -36,13 +38,17 @@ export function normalizeTypesenseError(
           : "TypesenseError",
       message:
         typeof errorLike.message === "string"
-          ? errorLike.message
+          ? redactText(errorLike.message)
           : "Unknown Typesense error",
-      details: error,
+      details: redactSecrets(error),
     };
   }
 
-  return { code: "TypesenseError", message: String(error) };
+  return { code: "TypesenseError", message: redactText(String(error)) };
+}
+
+export function formatTypesenseErrorMessage(error: unknown): string {
+  return normalizeTypesenseError(error).message;
 }
 
 type ErrorHintContext = {
