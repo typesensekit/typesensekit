@@ -42,6 +42,19 @@ List every supported operation:
 tsk operations
 ```
 
+Inspect an operation's input shape before running it:
+
+```sh
+tsk documents.search --schema
+tsk documents.search --examples
+```
+
+Search parameters are passed inside the top-level `params` object:
+
+```sh
+tsk documents.search --input '{"collection":"production__products","params":{"q":"*","query_by":"q"}}' --json
+```
+
 ## MCP Server
 
 Run the MCP stdio server directly:
