@@ -1,5 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createClient, operations, redactSecrets } from "@typesensekit/core";
+import {
+  createClient,
+  formatTypesenseErrorMessage,
+  operations,
+  redactSecrets,
+} from "@typesensekit/core";
 import type { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
 import { readEnvConfig } from "./env.js";
@@ -39,8 +44,7 @@ export function createTypesenseMcpServer() {
             ],
           };
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : String(error);
+          const message = formatTypesenseErrorMessage(error);
           return { isError: true, content: [{ type: "text", text: message }] };
         }
       },

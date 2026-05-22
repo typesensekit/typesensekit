@@ -5,6 +5,7 @@ export {
   serverConfigSchema,
 } from "./config.js";
 export {
+  formatTypesenseErrorMessage,
   getTypesenseErrorHint,
   type NormalizedTypesenseError,
   normalizeTypesenseError,
