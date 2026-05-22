@@ -3,6 +3,10 @@ import { api } from "./http.js";
 import type { Operation } from "./types.js";
 
 const methodSchema = z.enum(["get", "post", "put", "patch", "delete"]);
+const normalizedMethodSchema = z.preprocess(
+  (value) => (typeof value === "string" ? value.toLowerCase() : value),
+  methodSchema,
+);
 
 export const apiOperations = [
   {
@@ -11,7 +15,7 @@ export const apiOperations = [
       "Call any Typesense API endpoint not yet covered by a first-class operation",
     category: "api",
     input: z.object({
-      method: methodSchema,
+      method: normalizedMethodSchema,
       path: z.string().startsWith("/"),
       params: z.record(z.unknown()).optional(),
       body: z.unknown().optional(),
