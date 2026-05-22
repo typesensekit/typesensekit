@@ -30,6 +30,63 @@ describe("normalizeTypesenseError", () => {
       "Authorization: [REDACTED]",
     );
   });
+
+  it("formats DNS failures concisely by default", () => {
+    const error = Object.assign(new Error("getaddrinfo ENOTFOUND bad.host"), {
+      code: "ENOTFOUND",
+      hostname: "bad.host",
+      config: {
+        headers: {
+          "X-TYPESENSE-API-KEY": "secret-key",
+        },
+      },
+    });
+
+    expect(formatTypesenseErrorMessage(error)).toBe(
+      "Request failed: ENOTFOUND bad.host",
+    );
+  });
+
+  it("formats refused and timeout failures concisely by default", () => {
+    expect(
+      formatTypesenseErrorMessage(
+        Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:8108"), {
+          code: "ECONNREFUSED",
+          address: "127.0.0.1",
+          port: 8108,
+        }),
+      ),
+    ).toBe("Request failed: ECONNREFUSED 127.0.0.1:8108");
+
+    expect(
+      formatTypesenseErrorMessage(
+        Object.assign(new Error("timeout of 2000ms exceeded"), {
+          code: "ECONNABORTED",
+        }),
+      ),
+    ).toBe("Request failed: ECONNABORTED");
+  });
+
+  it("includes redacted diagnostic details in debug mode", () => {
+    const error = Object.assign(new Error("getaddrinfo ENOTFOUND bad.host"), {
+      code: "ENOTFOUND",
+      hostname: "bad.host",
+      config: {
+        headers: {
+          Authorization: "Bearer debug-token",
+          "X-TYPESENSE-API-KEY": "secret-key",
+        },
+      },
+    });
+
+    const message = formatTypesenseErrorMessage(error, { debug: true });
+
+    expect(message).toContain("Request failed: ENOTFOUND bad.host");
+    expect(message).toContain("Debug details:");
+    expect(message).toContain('"X-TYPESENSE-API-KEY": "[REDACTED]"');
+    expect(message).not.toContain("secret-key");
+    expect(message).not.toContain("debug-token");
+  });
 });
 
 describe("getTypesenseErrorHint", () => {
