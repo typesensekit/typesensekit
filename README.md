@@ -57,10 +57,19 @@ tsk documents.search --input '{"collection":"production__products","params":{"q"
 
 ## MCP Server
 
-Run the MCP stdio server directly:
+Run the MCP stdio server directly. MCP tools are read-only by default, so the
+assistant surface includes search, document reads, collection metadata, and
+status checks without write/delete/admin operations.
 
 ```sh
 TYPESENSE_URL=http://localhost:8108 TYPESENSE_API_KEY=xyz pnpm dlx @typesensekit/mcp
+```
+
+To expose the full operation registry, including writes, deletes, key
+management, and raw `api.call`, opt in explicitly:
+
+```sh
+TYPESENSEKIT_READ_ONLY=false TYPESENSE_URL=http://localhost:8108 TYPESENSE_API_KEY=xyz pnpm dlx @typesensekit/mcp
 ```
 
 Claude Desktop example:

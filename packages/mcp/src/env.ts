@@ -1,4 +1,5 @@
 import { serverConfigSchema } from "@typesensekit/core";
+import { readOnlyFromEnv } from "./read-only.js";
 
 export function readEnvConfig() {
   return serverConfigSchema.parse({
@@ -8,4 +9,10 @@ export function readEnvConfig() {
       ? Number(process.env.TYPESENSE_CONNECTION_TIMEOUT_SECONDS)
       : undefined,
   });
+}
+
+export function readMcpOptions() {
+  return {
+    readOnly: readOnlyFromEnv(process.env.TYPESENSEKIT_READ_ONLY),
+  };
 }

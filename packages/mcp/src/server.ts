@@ -7,7 +7,8 @@ import {
 } from "@typesensekit/core";
 import type { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
-import { readEnvConfig } from "./env.js";
+import { readEnvConfig, readMcpOptions } from "./env.js";
+import { filterMcpOperations } from "./read-only.js";
 
 type ToolShape = z.ZodObject<z.ZodRawShape>;
 
@@ -16,14 +17,24 @@ function toToolShape(input: z.ZodTypeAny): z.ZodRawShape {
   return objectInput.shape;
 }
 
-export function createTypesenseMcpServer() {
+export type TypesenseMcpServerOptions = {
+  readOnly?: boolean;
+};
+
+export function createTypesenseMcpServer(
+  options: TypesenseMcpServerOptions = {},
+) {
   const server = new McpServer({
     name: "typesensekit",
     version: packageJson.version,
   });
   const client = createClient(readEnvConfig());
+  const mcpOptions = { ...readMcpOptions(), ...options };
 
-  for (const operation of operations) {
+  for (const operation of filterMcpOperations(
+    operations,
+    mcpOptions.readOnly,
+  )) {
     server.registerTool(
       operation.name,
       {
