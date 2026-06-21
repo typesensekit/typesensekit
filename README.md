@@ -98,6 +98,9 @@ tsk skills claude-code
 tsk skills hermes
 ```
 
+For scoped key examples, production guidance, and the compatibility matrix, read
+[`docs/mcp-security.md`](./docs/mcp-security.md).
+
 ## API Coverage
 
 TypesenseKit covers the common Typesense administration and search surfaces, plus `api.call` for endpoints that are new, uncommon, or not yet wrapped.

@@ -9,4 +9,5 @@ TYPESENSE_URL=http://localhost:8108 TYPESENSE_API_KEY=xyz pnpm dlx @typesensekit
 
 Set `TYPESENSEKIT_READ_ONLY=false` to expose write/delete/admin tools.
 
-See the root README for client configuration and operation coverage.
+See the root README for client configuration, security guidance, and operation
+coverage.
