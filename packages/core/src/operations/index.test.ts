@@ -9,7 +9,10 @@ describe("operation registry", () => {
       expect.arrayContaining([
         "collections.create",
         "documents.search",
+        "documents.get_many",
         "multi_search",
+        "search.facets",
+        "search.suggestions",
         "keys.create",
         "analytics.events.create",
         "conversations.models.create",

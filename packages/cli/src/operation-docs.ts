@@ -62,6 +62,12 @@ const EXAMPLES: Record<string, JsonValue[]> = {
       document: { id: "sku-1", title: "Lounge chair" },
     },
   ],
+  "documents.get_many": [
+    {
+      collection: "products",
+      ids: ["sku-1", "sku-2"],
+    },
+  ],
   "documents.search": [
     {
       collection: "production__products",
@@ -76,6 +82,23 @@ const EXAMPLES: Record<string, JsonValue[]> = {
       description: "Search-only key",
       actions: ["documents:search"],
       collections: ["products"],
+    },
+  ],
+  "search.facets": [
+    {
+      collection: "products",
+      facetBy: ["brand", "category"],
+      filterBy: "in_stock:=true",
+      maxFacetValues: 20,
+    },
+  ],
+  "search.suggestions": [
+    {
+      collection: "products",
+      q: "lou",
+      queryBy: "title,brand",
+      includeFields: ["title", "brand"],
+      limit: 5,
     },
   ],
   "presets.create": [

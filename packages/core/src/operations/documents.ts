@@ -3,6 +3,7 @@ import { api, collectionPath, enc } from "./http.js";
 import type { Operation } from "./types.js";
 
 const documentSchema = z.record(z.unknown());
+const idsSchema = z.array(z.string().min(1)).min(1);
 const searchParams = z.record(
   z.union([
     z.string(),
@@ -46,6 +47,22 @@ export const documentOperations = [
       api(client).get(
         `${collectionPath(input.collection)}/documents/${enc(input.id)}`,
       ),
+  },
+  {
+    name: "documents.get_many",
+    summary: "Get multiple documents by id",
+    category: "documents",
+    input: z.object({ collection: z.string(), ids: idsSchema }),
+    execute: async (client, input) => {
+      const request = api(client);
+      return Promise.all(
+        input.ids.map((id: string) =>
+          request.get(
+            `${collectionPath(input.collection)}/documents/${enc(id)}`,
+          ),
+        ),
+      );
+    },
   },
   {
     name: "documents.update",

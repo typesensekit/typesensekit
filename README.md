@@ -108,8 +108,8 @@ TypesenseKit covers the common Typesense administration and search surfaces, plu
 | Area | Operations |
 | --- | --- |
 | Collections | list, get, create, update, delete, schema changes |
-| Documents | index, upsert, get, update, delete, import, export, search |
-| Search | search, multi-search |
+| Documents | index, upsert, get, get many, update, delete, import, export, search |
+| Search | search, multi-search, facet exploration, suggestions |
 | Configuration | aliases, synonyms, overrides, stopwords, presets |
 | Access | API keys |
 | Analytics | rules and events |

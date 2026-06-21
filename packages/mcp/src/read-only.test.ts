@@ -3,7 +3,10 @@ import { filterMcpOperations, readOnlyFromEnv } from "./read-only.js";
 
 const operations = [
   { name: "search" },
+  { name: "search.facets" },
+  { name: "search.suggestions" },
   { name: "documents.get" },
+  { name: "documents.get_many" },
   { name: "collections.retrieve" },
   { name: "documents.index" },
   { name: "collections.delete" },
@@ -15,7 +18,10 @@ describe("MCP read-only operation filtering", () => {
   it("keeps read-only tools and hides write, secret, and raw API tools", () => {
     expect(filterMcpOperations(operations, true).map((op) => op.name)).toEqual([
       "search",
+      "search.facets",
+      "search.suggestions",
       "documents.get",
+      "documents.get_many",
       "collections.retrieve",
     ]);
   });

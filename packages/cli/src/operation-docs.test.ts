@@ -43,6 +43,9 @@ describe("operation docs", () => {
     expect(renderOperationExamples("presets.create")).toContain(
       `tsk presets.create --input '{"name":"Semantic","value":{"query_by":"title_embedding"}}' --json`,
     );
+    expect(renderOperationExamples("search.facets")).toContain(
+      `tsk search.facets --input '{"collection":"products","facetBy":["brand","category"],"filterBy":"in_stock:=true","maxFacetValues":20}' --json`,
+    );
     expect(renderOperationExamples("api.call")).toContain(
       `tsk api.call --input '{"method":"get","path":"/collections"}' --json`,
     );
