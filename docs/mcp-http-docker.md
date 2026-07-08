@@ -27,6 +27,16 @@ TYPESENSE_CONNECTION_TIMEOUT_SECONDS=5
 
 ## Docker
 
+Use the prebuilt image:
+
+```sh
+docker run --rm -p 3000:3000 \
+  -e TYPESENSE_URL=https://your-cluster.typesense.net \
+  -e TYPESENSE_API_KEY=your-scoped-api-key \
+  -e TYPESENSEKIT_READ_ONLY=true \
+  ghcr.io/akshitkrnagpal/typesensekit-mcp:latest
+```
+
 Build the image:
 
 ```sh
