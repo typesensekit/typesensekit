@@ -1,20 +1,17 @@
-import { execFile } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
-import { promisify } from "node:util";
 
-const execFileAsync = promisify(execFile);
-
-async function versionExists(name, version) {
-  try {
-    const { stdout } = await execFileAsync(
-      "npm",
-      ["view", `${name}@${version}`, "version", "--json"],
-      { env: process.env },
+export async function versionExists(name, version) {
+  const url = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`;
+  const response = await fetch(url, {
+    headers: { accept: "application/json" },
+  });
+  if (response.status === 404) return false;
+  if (!response.ok) {
+    throw new Error(
+      `npm registry preflight failed for ${name}@${version}: HTTP ${response.status}`,
     );
-    return JSON.parse(stdout) === version;
-  } catch {
-    return false;
   }
+  return true;
 }
 
 export async function skipPublishedPackage(
