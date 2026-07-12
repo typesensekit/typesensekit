@@ -1,0 +1,132 @@
+---
+import CopyCode from "../components/CopyCode.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const faqs = [
+  {
+    question: "What is a Typesense MCP server?",
+    answer: "A Typesense MCP server connects Model Context Protocol clients to a Typesense cluster. TypesenseKit gives AI agents structured tools for search, schema inspection, collection metadata, administration, and other supported Typesense operations.",
+  },
+  {
+    question: "Is TypesenseKit an official Typesense project?",
+    answer: "No. TypesenseKit is an independent, community-built MIT-licensed open-source project for working with Typesense.",
+  },
+  {
+    question: "Is the Typesense MCP server read-only?",
+    answer: "Yes by default. Search, reads, collection metadata, configuration reads, and system status tools are available, while write, delete, key-management, and raw API tools require an explicit full-access opt-in.",
+  },
+  {
+    question: "Which AI clients work with TypesenseKit MCP?",
+    answer: "TypesenseKit supports stdio configurations for Claude Desktop, Claude Code, Codex, Cursor, and generic MCP-compatible clients. It also supports Streamable HTTP deployments.",
+  },
+  {
+    question: "How do I install the Typesense MCP server?",
+    answer: "Run it without a global install using npx -y @typesensekit/mcp or pnpm dlx @typesensekit/mcp, with TYPESENSE_URL and TYPESENSE_API_KEY in the environment.",
+  },
+];
+
+const schema = [
+  {
+    "@type": "SoftwareApplication",
+    "@id": "https://typesensekit.vercel.app/typesense-mcp/#software",
+    name: "TypesenseKit MCP Server",
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "macOS, Linux, Windows",
+    description: "Open-source Typesense MCP server that connects AI agents to secure, typed Typesense operations.",
+    url: "https://typesensekit.vercel.app/typesense-mcp/",
+    downloadUrl: "https://www.npmjs.com/package/@typesensekit/mcp",
+    codeRepository: "https://github.com/akshitkrnagpal/typesensekit",
+    license: "https://github.com/akshitkrnagpal/typesensekit/blob/main/LICENSE",
+    author: { "@id": "https://typesensekit.vercel.app/#organization" },
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  },
+  {
+    "@type": "FAQPage",
+    mainEntity: faqs.map(({ question, answer }) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: { "@type": "Answer", text: answer },
+    })),
+  },
+  {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://typesensekit.vercel.app/" },
+      { "@type": "ListItem", position: 2, name: "Typesense MCP", item: "https://typesensekit.vercel.app/typesense-mcp/" },
+    ],
+  },
+];
+
+const quickStart = `TYPESENSE_URL=https://your-cluster.typesense.net \\
+TYPESENSE_API_KEY=your-scoped-api-key \\
+pnpm dlx @typesensekit/mcp`;
+---
+
+<BaseLayout
+  title="Typesense MCP Server for AI Agents | TypesenseKit"
+  description="Connect Claude, Codex, Cursor, and other AI agents to Typesense with a secure open-source MCP server. Read-only by default."
+  path="/typesense-mcp/"
+  {schema}
+>
+  <section class="seo-hero">
+    <div class="page-shell seo-hero-grid">
+      <div class="seo-hero-copy">
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Typesense MCP</span></nav>
+        <p class="eyebrow">Model Context Protocol</p>
+        <h1>Typesense MCP server for AI agents</h1>
+        <p class="seo-definition">Connect Claude, Codex, Cursor, and other MCP clients to Typesense through structured, typed tools—read-only by default.</p>
+        <p>TypesenseKit MCP is an independent, community-built open-source server. It shares the same operation registry as the TypesenseKit CLI, so agents and operators use consistent inputs and outputs.</p>
+        <div class="button-row">
+          <a class="button primary" href="https://github.com/akshitkrnagpal/typesensekit">Star on GitHub <span aria-hidden="true">↗</span></a>
+          <a class="button" href="/guides/clients/">Connect an AI client</a>
+        </div>
+        <div class="trust-row"><span>MIT licensed</span><span>Read-only default</span><span>Stdio + HTTP</span></div>
+      </div>
+      <div class="seo-install" aria-label="Typesense MCP quick start">
+        <p class="card-label">Run with pnpm</p>
+        <CopyCode code={quickStart} label="Terminal" />
+        <p>No global install or server runtime is required. Use a narrowly scoped Typesense API key.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="seo-section page-shell" aria-labelledby="what-is-mcp">
+    <div class="section-heading">
+      <div><p class="eyebrow">One MCP surface</p><h2 id="what-is-mcp">Give agents useful Typesense context</h2></div>
+      <p>Let an assistant inspect a schema, search documents, check cluster health, and explain structured results without handing it an unbounded shell script.</p>
+    </div>
+    <div class="seo-feature-grid">
+      <article class="seo-feature-card"><span class="seo-feature-number">01</span><h3>Search and inspect</h3><p>Search documents, retrieve records, list collections, and inspect schemas through validated tool inputs.</p></article>
+      <article class="seo-feature-card"><span class="seo-feature-number">02</span><h3>Safe agent access</h3><p>Write, delete, key-management, and raw API tools stay hidden until full access is deliberately enabled.</p></article>
+      <article class="seo-feature-card"><span class="seo-feature-number">03</span><h3>Structured results</h3><p>Agents receive predictable JSON-shaped results from the same typed operations available in the CLI.</p></article>
+    </div>
+  </section>
+
+  <section class="seo-section page-shell seo-split" aria-labelledby="clients">
+    <div>
+      <p class="eyebrow">Supported clients</p>
+      <h2 id="clients">Use Typesense with your AI coding tools</h2>
+      <p>Copy supported configurations for Claude Desktop, Claude Code, Codex, Cursor, or any client that can launch a stdio MCP server.</p>
+      <a class="text-link" href="/guides/clients/">View client configurations →</a>
+    </div>
+    <div class="security-list">
+      <article class="security-item"><span>R</span><div><h3>Read-only by default</h3><p>Start with search and inspection tools. Enable full access only for a controlled workflow.</p></div></article>
+      <article class="security-item"><span>K</span><div><h3>Scoped Typesense keys</h3><p>Combine the server default with a narrowly scoped API key for defense in depth.</p></div></article>
+      <article class="security-item"><span>↔</span><div><h3>Stdio or Streamable HTTP</h3><p>Run locally through stdio or follow the production guidance for authenticated remote access.</p></div></article>
+    </div>
+  </section>
+
+  <section class="seo-section page-shell" aria-labelledby="mcp-faq">
+    <div class="section-heading"><div><p class="eyebrow">Common questions</p><h2 id="mcp-faq">Typesense MCP FAQ</h2></div><p>Installation, compatibility, ownership, and access defaults at a glance.</p></div>
+    <div class="seo-faq">
+      {faqs.map(({ question, answer }) => <details><summary>{question}</summary><p>{answer}</p></details>)}
+    </div>
+  </section>
+
+  <section class="page-shell final-cta">
+    <p class="eyebrow">Open source</p>
+    <h2>Bring safe Typesense tools to your agent.</h2>
+    <p>Try the MCP server, inspect the code, and star TypesenseKit if it improves your search workflow.</p>
+    <div class="button-row seo-centered"><a class="button primary" href="https://github.com/akshitkrnagpal/typesensekit">Star TypesenseKit on GitHub <span aria-hidden="true">↗</span></a><a class="button" href="/guides/mcp/">Read the MCP guide</a></div>
+  </section>
+</BaseLayout>

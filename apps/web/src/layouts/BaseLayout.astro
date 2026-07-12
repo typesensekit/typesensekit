@@ -6,6 +6,7 @@ interface Props {
   description?: string;
   path?: string;
   guide?: boolean;
+  schema?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 const {
@@ -13,9 +14,36 @@ const {
   description = "Operate Typesense from your terminal or AI agent with one typed CLI and MCP operation registry.",
   path = Astro.url.pathname,
   guide = false,
+  schema,
 } = Astro.props;
 const canonical = new URL(path, Astro.site);
 const socialImage = new URL("/images/github-og.png", Astro.site);
+const organizationSchema = {
+  "@type": "Organization",
+  "@id": "https://typesensekit.vercel.app/#organization",
+  name: "TypesenseKit",
+  url: "https://typesensekit.vercel.app/",
+  sameAs: [
+    "https://github.com/akshitkrnagpal/typesensekit",
+    "https://www.npmjs.com/package/@typesensekit/cli",
+    "https://www.npmjs.com/package/@typesensekit/mcp",
+  ],
+};
+const websiteSchema = {
+  "@type": "WebSite",
+  "@id": "https://typesensekit.vercel.app/#website",
+  name: "TypesenseKit",
+  alternateName: "Typesense CLI and MCP",
+  url: "https://typesensekit.vercel.app/",
+  description: "Open-source Typesense CLI and MCP server for search operations and AI agents.",
+  publisher: { "@id": "https://typesensekit.vercel.app/#organization" },
+};
+const pageSchemas = schema ? (Array.isArray(schema) ? schema : [schema]) : [];
+const schemaGraph = [
+  ...(path === "/" ? [organizationSchema, websiteSchema] : pageSchemas.length > 0 ? [organizationSchema] : []),
+  ...pageSchemas,
+];
+const serializedSchema = schemaGraph.length > 0 ? JSON.stringify({ "@context": "https://schema.org", "@graph": schemaGraph }).replaceAll("<", "\\u003c") : undefined;
 ---
 
 <!doctype html>
@@ -39,6 +67,7 @@ const socialImage = new URL("/images/github-og.png", Astro.site);
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage} />
+    {serializedSchema && <script type="application/ld+json" set:html={serializedSchema} is:inline />}
     <title>{title}</title>
   </head>
   <body class:list={{ "guide-page": guide }}>
@@ -51,8 +80,8 @@ const socialImage = new URL("/images/github-og.png", Astro.site);
         </a>
         <div class="nav-links">
           <a href={guide ? "/#product" : "#product"}>Product</a>
-          <a href="/guides/cli/">CLI</a>
-          <a href="/guides/mcp/">MCP</a>
+          <a href="/typesense-cli/">CLI</a>
+          <a href="/typesense-mcp/">MCP</a>
           <a href="/guides/clients/">Guides</a>
           <a class="nav-github" href="https://github.com/akshitkrnagpal/typesensekit">GitHub <span aria-hidden="true">↗</span></a>
         </div>
@@ -73,6 +102,8 @@ const socialImage = new URL("/images/github-og.png", Astro.site);
         <div class="footer-links" aria-label="Project links">
           <a href="https://www.npmjs.com/package/@typesensekit/cli">CLI on npm</a>
           <a href="https://www.npmjs.com/package/@typesensekit/mcp">MCP on npm</a>
+          <a href="/typesense-cli/">Typesense CLI</a>
+          <a href="/typesense-mcp/">Typesense MCP</a>
           <a href="https://github.com/akshitkrnagpal/typesensekit/releases">Releases</a>
           <a href="https://github.com/akshitkrnagpal/typesensekit/blob/main/CONTRIBUTING.md">Contributing</a>
           <a href="https://github.com/akshitkrnagpal/typesensekit/blob/main/LICENSE">MIT License</a>
