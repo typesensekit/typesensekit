@@ -267,19 +267,46 @@ export function renderInputSchema(input: z.ZodTypeAny): string {
   return JSON.stringify(inputObjectSchema(input), null, 2);
 }
 
-export function renderOperationExamples(operationName: string): string {
-  const examples = EXAMPLES[operationName];
-  if (!examples) {
-    return [
-      `No curated examples are available for ${operationName}.`,
-      `Run: tsk ${operationName} --schema`,
-    ].join("\n");
-  }
-
+export function renderOperationExamples(
+  operationName: string,
+  input: z.ZodTypeAny,
+): string {
+  const examples = EXAMPLES[operationName] ?? [
+    exampleFromSchema(inputObjectSchema(input)),
+  ];
   return examples
     .map(
       (example) =>
         `tsk ${operationName} --input '${JSON.stringify(example)}' --json`,
     )
     .join("\n");
+}
+
+function exampleFromSchema(schema: JsonSchema, propertyName = ""): JsonValue {
+  if (schema.enum?.[0]) return schema.enum[0];
+  if (schema.anyOf?.[0])
+    return exampleFromSchema(schema.anyOf[0], propertyName);
+  if (schema.type === "string") {
+    if (propertyName === "path") return "/collections";
+    if (/collection/i.test(propertyName)) return "products";
+    if (/^(?:id|name)$/i.test(propertyName)) return "example";
+    if (/query|^q$/i.test(propertyName)) return "*";
+    if (/url/i.test(propertyName)) return "https://typesense.example.com";
+    if (/key|secret|token/i.test(propertyName)) return "[REDACTED]";
+    return "value";
+  }
+  if (schema.type === "number") return 1;
+  if (schema.type === "boolean") return true;
+  if (schema.type === "array") {
+    return [exampleFromSchema(schema.items ?? {}, propertyName)];
+  }
+  if (schema.type === "object") {
+    return Object.fromEntries(
+      (schema.required ?? []).map((name) => [
+        name,
+        exampleFromSchema(schema.properties?.[name] ?? {}, name),
+      ]),
+    );
+  }
+  return null;
 }

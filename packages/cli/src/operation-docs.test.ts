@@ -37,17 +37,39 @@ describe("operation docs", () => {
   });
 
   it("renders command-specific examples for common operations", () => {
-    expect(renderOperationExamples("documents.search")).toContain(
+    expect(
+      renderOperationExamples(
+        "documents.search",
+        operationInput("documents.search"),
+      ),
+    ).toContain(
       `tsk documents.search --input '{"collection":"production__products","params":{"q":"*","query_by":"q"}}' --json`,
     );
-    expect(renderOperationExamples("presets.create")).toContain(
+    expect(
+      renderOperationExamples(
+        "presets.create",
+        operationInput("presets.create"),
+      ),
+    ).toContain(
       `tsk presets.create --input '{"name":"Semantic","value":{"query_by":"title_embedding"}}' --json`,
     );
-    expect(renderOperationExamples("search.facets")).toContain(
+    expect(
+      renderOperationExamples("search.facets", operationInput("search.facets")),
+    ).toContain(
       `tsk search.facets --input '{"collection":"products","facetBy":["brand","category"],"filterBy":"in_stock:=true","maxFacetValues":20}' --json`,
     );
-    expect(renderOperationExamples("api.call")).toContain(
+    expect(
+      renderOperationExamples("api.call", operationInput("api.call")),
+    ).toContain(
       `tsk api.call --input '{"method":"get","path":"/collections"}' --json`,
     );
+  });
+
+  it("generates an invocation for every registered operation", () => {
+    for (const operation of operations) {
+      const rendered = renderOperationExamples(operation.name, operation.input);
+      expect(rendered).toContain(`tsk ${operation.name} --input '`);
+      expect(rendered).not.toContain("No curated examples");
+    }
   });
 });

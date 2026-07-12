@@ -23,6 +23,14 @@ redacted JSON output in scripts.
 
 Destructive operations prompt before execution. Pass `--yes` only for deliberate
 non-interactive automation.
+
+Every operation supports `--schema` and `--examples`. Enable shell completion with:
+
+```sh
+source <(tsk completion zsh)              # zsh
+source <(tsk completion bash)             # bash
+tsk completion fish | source              # fish
+```
 tsk collections.list --input '{}'
 tsk skills mcp
 ```

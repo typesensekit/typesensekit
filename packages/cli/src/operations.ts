@@ -129,7 +129,9 @@ export function operationCommands() {
             return;
           }
           if (args.examples) {
-            console.log(renderOperationExamples(operation.name));
+            console.log(
+              renderOperationExamples(operation.name, operation.input),
+            );
             return;
           }
 
