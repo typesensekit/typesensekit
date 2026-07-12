@@ -1,5 +1,15 @@
 # @typesensekit/cli
 
+## 1.4.0
+
+### Minor Changes
+
+- c7919af: Add hidden API-key prompting, stdin ingestion, and macOS Keychain-backed profiles.
+- 3df75ce: Add profile connection testing plus validated, secret-safe profile import and export workflows.
+- eaa9f0e: Render readable tables by default while preserving redacted JSON output for automation.
+- 86b7fd6: Confirm destructive operations interactively and support explicit `--yes` automation.
+- f86636c: Add Bash, Zsh, and Fish completion plus schema-derived examples for every operation.
+
 ## 1.2.0
 
 ### Minor Changes
