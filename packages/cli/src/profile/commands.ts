@@ -1,6 +1,11 @@
 import { serverConfigSchema } from "@typesensekit/core";
 import { defineCommand } from "citty";
 import {
+  promptForApiKey,
+  readApiKeyFromStdin,
+  saveKeychainApiKey,
+} from "./credentials.js";
+import {
   loadConfig,
   type ProfileConfig,
   redactApiKey,
@@ -46,21 +51,39 @@ export const profileCommand = defineCommand({
         url: { type: "string", required: true, description: "Typesense URL" },
         apiKey: {
           type: "string",
-          required: true,
-          description: "Typesense API key",
+          description: "Typesense API key (prefer prompt or --api-key-stdin)",
+        },
+        apiKeyStdin: {
+          type: "boolean",
+          description: "Read the API key from stdin",
+        },
+        keychain: {
+          type: "boolean",
+          description: "Store the API key in the macOS Keychain",
         },
         timeout: { type: "string", description: "Connection timeout seconds" },
         config: { type: "string", description: "Config file path" },
       },
       async run({ args }) {
+        if (args.apiKey !== undefined && args.apiKeyStdin) {
+          throw new Error("Use only one of --api-key or --api-key-stdin");
+        }
+        const apiKey =
+          args.apiKey ??
+          (args.apiKeyStdin
+            ? await readApiKeyFromStdin()
+            : await promptForApiKey());
         const cfg = await loadConfig(args.config);
-        const profile = serverConfigSchema.parse({
+        const connection = serverConfigSchema.omit({ apiKey: true }).parse({
           url: args.url,
-          apiKey: args.apiKey,
           connectionTimeoutSeconds: args.timeout
             ? Number(args.timeout)
             : undefined,
         });
+        const profile = args.keychain
+          ? { ...connection, apiKeyKeychain: args.name }
+          : { ...connection, apiKey };
+        if (args.keychain) await saveKeychainApiKey(args.name, apiKey);
         cfg.profiles[args.name] = profile;
         cfg.currentProfile = cfg.currentProfile ?? args.name;
         await saveConfig(cfg, args.config);
@@ -110,9 +133,15 @@ export const profileCommand = defineCommand({
           JSON.stringify(
             {
               ...profile,
-              apiKey: args.reveal
-                ? profile.apiKey
-                : redactApiKey(profile.apiKey),
+              apiKey: profile.apiKey
+                ? args.reveal
+                  ? profile.apiKey
+                  : redactApiKey(profile.apiKey)
+                : undefined,
+              credentialSource: profile.apiKeyKeychain
+                ? `macOS Keychain (${profile.apiKeyKeychain})`
+                : "config file",
+              apiKeyKeychain: undefined,
             },
             null,
             2,

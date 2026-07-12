@@ -4,6 +4,7 @@ import {
   serverConfigSchema,
   type TypesenseClient,
 } from "@typesensekit/core";
+import { loadKeychainApiKey } from "./credentials.js";
 import { loadConfig } from "./store.js";
 
 export type ResolveOptions = {
@@ -42,7 +43,14 @@ async function resolveStoredProfile(
   if (!profile) {
     throw new Error(`Typesense profile not found: ${profileName}`);
   }
-  return profile;
+  const apiKey = profile.apiKeyKeychain
+    ? await loadKeychainApiKey(profile.apiKeyKeychain)
+    : profile.apiKey;
+  return serverConfigSchema.parse({
+    ...profile,
+    apiKey,
+    apiKeyKeychain: undefined,
+  });
 }
 
 export async function resolveClient(

@@ -5,9 +5,22 @@ import { serverConfigSchema } from "@typesensekit/core";
 import envPaths from "env-paths";
 import { z } from "zod";
 
+export const storedProfileSchema = serverConfigSchema
+  .omit({ apiKey: true })
+  .extend({
+    apiKey: z.string().min(1).optional(),
+    apiKeyKeychain: z.string().min(1).optional(),
+  })
+  .refine(
+    (profile) => Boolean(profile.apiKey) !== Boolean(profile.apiKeyKeychain),
+    {
+      message: "A profile must contain exactly one API key source",
+    },
+  );
+
 export const profileConfigSchema = z.object({
   currentProfile: z.string().optional(),
-  profiles: z.record(serverConfigSchema).default({}),
+  profiles: z.record(storedProfileSchema).default({}),
 });
 
 export type ProfileConfig = z.infer<typeof profileConfigSchema>;
