@@ -8,6 +8,10 @@ import {
 import type { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
 import { readEnvConfig, readMcpOptions } from "./env.js";
+import {
+  type McpExecutionController,
+  sharedMcpExecutionController,
+} from "./execution.js";
 import { filterMcpOperations } from "./read-only.js";
 import { registerTypesenseResources } from "./resources.js";
 
@@ -20,6 +24,7 @@ function toToolShape(input: z.ZodTypeAny): z.ZodRawShape {
 
 export type TypesenseMcpServerOptions = {
   readOnly?: boolean;
+  executionController?: McpExecutionController;
 };
 
 export function createTypesenseMcpServer(
@@ -31,6 +36,8 @@ export function createTypesenseMcpServer(
   });
   const client = createClient(readEnvConfig());
   const mcpOptions = { ...readMcpOptions(), ...options };
+  const execution =
+    options.executionController ?? sharedMcpExecutionController();
 
   const activeOperations = filterMcpOperations(operations, mcpOptions.readOnly);
 
@@ -52,12 +59,15 @@ export function createTypesenseMcpServer(
       async (args) => {
         try {
           const input = operation.input.parse(args);
-          const result = await operation.execute(client, input);
+          const result = await execution.run(() =>
+            operation.execute(client, input),
+          );
+          const safeResult = redactSecrets(result);
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(redactSecrets(result), null, 2),
+                text: execution.serialize(safeResult),
               },
             ],
           };
