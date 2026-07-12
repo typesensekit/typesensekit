@@ -16,9 +16,29 @@ interface Props {
 }
 
 const { title, description, eyebrow, toc, previous, next } = Astro.props;
+const guideUrl = new URL(Astro.url.pathname, Astro.site).href;
+const guideSchema = [
+  {
+    "@type": "TechArticle",
+    headline: title,
+    description,
+    url: guideUrl,
+    mainEntityOfPage: guideUrl,
+    author: { "@id": "https://typesensekit.vercel.app/#organization" },
+    publisher: { "@id": "https://typesensekit.vercel.app/#organization" },
+  },
+  {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "TypesenseKit", item: "https://typesensekit.vercel.app/" },
+      { "@type": "ListItem", position: 2, name: "Guides", item: "https://typesensekit.vercel.app/guides/clients/" },
+      { "@type": "ListItem", position: 3, name: title, item: guideUrl },
+    ],
+  },
+];
 ---
 
-<BaseLayout title={`${title} — TypesenseKit`} description={description} guide>
+<BaseLayout title={`${title} | TypesenseKit`} description={description} schema={guideSchema} guide>
   <div class="guide-hero page-shell">
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="/">Home</a><span aria-hidden="true">/</span><a href="/guides/clients/">Guides</a><span aria-hidden="true">/</span><span>{eyebrow}</span>

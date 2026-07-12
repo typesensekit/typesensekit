@@ -14,14 +14,15 @@ const toc = [
 ---
 
 <GuideLayout
-  title="Connect AI agents to Typesense safely"
-  description="Run TypesenseKit over MCP with read-only defaults, explicit access expansion, and the same validated operations available in the CLI."
+  title="Typesense MCP setup and security guide"
+  description="Install the Typesense MCP server, connect AI clients, use read-only defaults, and securely expose Typesense operations to agents."
   eyebrow="MCP guide"
   {toc}
   previous={{ href: "/guides/cli/", label: "Operate with the CLI" }}
   next={{ href: "/guides/clients/", label: "Configure an MCP client" }}
 >
   <h2 id="start">Start the stdio server</h2>
+  <p>Looking for the product overview? Start with the <a href="/typesense-mcp/">TypesenseKit Typesense MCP server</a>, then use this guide for transport, resources, and production security.</p>
   <p>Compatible MCP clients can launch the package directly from npm. Provide the Typesense URL and a suitably scoped API key in the server environment.</p>
   <CopyCode code={"TYPESENSE_URL=http://localhost:8108 \\\nTYPESENSE_API_KEY=xyz \\\npnpm dlx @typesensekit/mcp"} />
   <p>The process communicates over stdio, so your client should own its lifecycle and send MCP messages through standard input and output.</p>

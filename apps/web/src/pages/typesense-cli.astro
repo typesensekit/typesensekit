@@ -1,0 +1,141 @@
+---
+import CopyCode from "../components/CopyCode.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const faqs = [
+  {
+    question: "What is a Typesense CLI?",
+    answer: "A Typesense CLI lets operators manage and inspect a Typesense cluster from a terminal. TypesenseKit provides typed commands for collections, documents, search, schemas, configuration, and system operations.",
+  },
+  {
+    question: "How do I install the TypesenseKit CLI?",
+    answer: "Install it globally with pnpm add -g @typesensekit/cli or npm install -g @typesensekit/cli. The command is tsk.",
+  },
+  {
+    question: "Does the CLI work with Typesense Cloud and self-hosted Typesense?",
+    answer: "Yes. Point a profile or the TYPESENSE_URL environment variable at any reachable Typesense cluster and provide an API key with the permissions your commands require.",
+  },
+  {
+    question: "How is a Typesense CLI different from a client library?",
+    answer: "Use an official Typesense client inside application code. Use TypesenseKit when a human, shell script, CI job, or AI agent needs a terminal-first operational interface with generated schemas, examples, JSON output, and safety controls.",
+  },
+  {
+    question: "How does TypesenseKit protect credentials?",
+    answer: "Profiles can prompt securely, read an API key from stdin, or use macOS Keychain. Output and errors redact secrets, and environment-only operation is also supported.",
+  },
+];
+
+const schema = [
+  {
+    "@type": "SoftwareApplication",
+    "@id": "https://typesensekit.vercel.app/typesense-cli/#software",
+    name: "TypesenseKit CLI",
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "macOS, Linux, Windows",
+    description: "Open-source Typesense CLI for search, collections, documents, schemas, configuration, and cluster operations.",
+    url: "https://typesensekit.vercel.app/typesense-cli/",
+    downloadUrl: "https://www.npmjs.com/package/@typesensekit/cli",
+    codeRepository: "https://github.com/akshitkrnagpal/typesensekit",
+    license: "https://github.com/akshitkrnagpal/typesensekit/blob/main/LICENSE",
+    author: { "@id": "https://typesensekit.vercel.app/#organization" },
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  },
+  {
+    "@type": "FAQPage",
+    mainEntity: faqs.map(({ question, answer }) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: { "@type": "Answer", text: answer },
+    })),
+  },
+  {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://typesensekit.vercel.app/" },
+      { "@type": "ListItem", position: 2, name: "Typesense CLI", item: "https://typesensekit.vercel.app/typesense-cli/" },
+    ],
+  },
+];
+
+const quickStart = `pnpm add -g @typesensekit/cli
+
+tsk profile add local --url http://localhost:8108
+tsk profile use local
+tsk collections.list --input '{}'`;
+---
+
+<BaseLayout
+  title="Typesense CLI for Search Operations | TypesenseKit"
+  description="Manage Typesense collections, documents, search, schemas, and cluster operations from a secure open-source CLI. Install with pnpm or npm."
+  path="/typesense-cli/"
+  {schema}
+>
+  <section class="seo-hero">
+    <div class="page-shell seo-hero-grid">
+      <div class="seo-hero-copy">
+        <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><span>Typesense CLI</span></nav>
+        <p class="eyebrow">Terminal-first operations</p>
+        <h1>A Typesense CLI for search operations</h1>
+        <p class="seo-definition">Manage Typesense collections, documents, schemas, search, configuration, and cluster operations from one typed command line.</p>
+        <p>TypesenseKit turns the Typesense Admin API into discoverable commands with generated schemas, copy-ready examples, readable tables, stable JSON, and safer credential handling.</p>
+        <div class="button-row">
+          <a class="button primary" href="https://github.com/akshitkrnagpal/typesensekit">Star on GitHub <span aria-hidden="true">↗</span></a>
+          <a class="button" href="/guides/cli/">Read the CLI guide</a>
+        </div>
+        <div class="trust-row"><span>MIT licensed</span><span>Typed inputs</span><span>JSON output</span></div>
+      </div>
+      <div class="seo-install" aria-label="Typesense CLI quick start">
+        <p class="card-label">Install and connect</p>
+        <CopyCode code={quickStart} label="Terminal" />
+        <p>The profile command prompts for your API key without placing it in shell history.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="seo-section page-shell" aria-labelledby="cli-operations">
+    <div class="section-heading">
+      <div><p class="eyebrow">Operational coverage</p><h2 id="cli-operations">Run Typesense work without one-off scripts</h2></div>
+      <p>Inspect the input schema before every operation, run the command, and choose human-readable output or stable JSON for automation.</p>
+    </div>
+    <div class="seo-feature-grid">
+      <article class="seo-feature-card"><span class="seo-feature-number">01</span><h3>Collections and schemas</h3><p>Create, inspect, update, alias, and manage collection configuration with validated inputs.</p></article>
+      <article class="seo-feature-card"><span class="seo-feature-number">02</span><h3>Documents and search</h3><p>Import, export, retrieve, search, and delete documents from a consistent terminal interface.</p></article>
+      <article class="seo-feature-card"><span class="seo-feature-number">03</span><h3>Cluster administration</h3><p>Work with keys, presets, analytics, health, metrics, snapshots, and other supported Typesense operations.</p></article>
+    </div>
+  </section>
+
+  <section class="seo-section page-shell seo-split" aria-labelledby="cli-automation">
+    <div>
+      <p class="eyebrow">Humans and scripts</p>
+      <h2 id="cli-automation">Discoverable at the prompt. Predictable in CI.</h2>
+      <p>Every operation can show its generated schema and examples. Add <code>--json</code> when another program needs stable, redacted output.</p>
+      <CopyCode code={"tsk operations\ntsk documents.search --schema\ntsk documents.search --examples\ntsk collections.list --input '{}' --json"} label="Discovery and JSON" />
+    </div>
+    <div class="security-list">
+      <article class="security-item"><span>P</span><div><h3>Secure profiles</h3><p>Prompt for secrets, pipe them over stdin, use macOS Keychain, or stay environment-only.</p></div></article>
+      <article class="security-item"><span>!</span><div><h3>Destructive confirmations</h3><p>Interactive commands confirm destructive operations before sending them to Typesense.</p></div></article>
+      <article class="security-item"><span>&#123; &#125;</span><div><h3>Redacted JSON</h3><p>Use structured output for scripts while keeping known secret fields out of results and errors.</p></div></article>
+    </div>
+  </section>
+
+  <section class="seo-section page-shell" aria-labelledby="cli-client">
+    <div class="seo-split seo-compact-split">
+      <div><p class="eyebrow">Choose the right tool</p><h2 id="cli-client">CLI for operations, client library for your app</h2></div>
+      <div><p>Official Typesense clients belong in application code. TypesenseKit is for terminal workflows shared by operators, shell automation, CI jobs, and AI agents.</p><a class="text-link" href="https://typesense.org/docs/guide/install-typesense.html#step-3-connect-to-typesense">Explore official Typesense clients →</a></div>
+    </div>
+  </section>
+
+  <section class="seo-section page-shell" aria-labelledby="cli-faq">
+    <div class="section-heading"><div><p class="eyebrow">Common questions</p><h2 id="cli-faq">Typesense CLI FAQ</h2></div><p>Installation, cluster compatibility, credentials, and when to use a command-line tool.</p></div>
+    <div class="seo-faq">
+      {faqs.map(({ question, answer }) => <details><summary>{question}</summary><p>{answer}</p></details>)}
+    </div>
+  </section>
+
+  <section class="page-shell final-cta">
+    <p class="eyebrow">Open source</p>
+    <h2>Put Typesense operations in your terminal.</h2>
+    <p>Install the CLI, inspect the commands, and star TypesenseKit if it improves your search workflow.</p>
+    <div class="button-row seo-centered"><a class="button primary" href="https://github.com/akshitkrnagpal/typesensekit">Star TypesenseKit on GitHub <span aria-hidden="true">↗</span></a><a class="button" href="/guides/cli/">Read the CLI guide</a></div>
+  </section>
+</BaseLayout>

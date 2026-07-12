@@ -2,16 +2,19 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
-<BaseLayout>
+<BaseLayout
+  title="Typesense CLI & MCP Server for AI Agents | TypesenseKit"
+  description="TypesenseKit is an open-source Typesense CLI and MCP server for search operations, cluster administration, automation, and AI agents."
+>
   <section class="hero page-shell">
     <div class="hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow">Typesense operations, unified</p>
-        <h1>Operate Typesense <span>from anywhere.</span></h1>
+        <p class="eyebrow">Typesense CLI + MCP server</p>
+        <h1>The Typesense CLI <span>for humans and agents.</span></h1>
         <p>One typed operation registry powers a human-friendly CLI and a secure MCP server—so your terminal and AI agents speak the same Typesense API.</p>
         <div class="button-row">
           <a class="button primary" href="https://github.com/akshitkrnagpal/typesensekit">Star on GitHub <span aria-hidden="true">★</span></a>
-          <a class="button" href="/guides/cli/">Get started <span aria-hidden="true">→</span></a>
+          <a class="button" href="/typesense-cli/">Explore the CLI <span aria-hidden="true">→</span></a>
         </div>
         <div class="hero-install" aria-label="Install TypesenseKit CLI"><span>$</span> pnpm add -g @typesensekit/cli</div>
         <div class="trust-row" aria-label="Project attributes">
@@ -53,17 +56,17 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     <div class="product-grid">
       <article class="product-card" id="cli">
         <span class="card-label">@typesensekit/cli</span>
-        <h3>A CLI that is pleasant interactively and stable in scripts.</h3>
+        <h3>A Typesense CLI that works interactively and in scripts.</h3>
         <p>Profiles, readable tables, structured JSON, input schemas, examples, shell completion, and deliberate confirmations for destructive work.</p>
         <div class="inline-code"><span>$</span> tsk documents.search --examples</div>
-        <a class="text-link" href="/guides/cli/">Explore the CLI guide <span aria-hidden="true">→</span></a>
+        <a class="text-link" href="/typesense-cli/">Explore the Typesense CLI <span aria-hidden="true">→</span></a>
       </article>
       <article class="product-card" id="mcp">
         <span class="card-label">@typesensekit/mcp</span>
-        <h3>Give AI agents useful access—not unlimited access.</h3>
+        <h3>A Typesense MCP server with safe defaults for AI agents.</h3>
         <p>Start with read-only search and inspection tools. Opt in to writes and administration only when the workflow calls for them.</p>
         <div class="inline-code"><span>$</span> pnpm dlx @typesensekit/mcp</div>
-        <a class="text-link" href="/guides/mcp/">Explore the MCP guide <span aria-hidden="true">→</span></a>
+        <a class="text-link" href="/typesense-mcp/">Explore the Typesense MCP server <span aria-hidden="true">→</span></a>
       </article>
     </div>
   </section>

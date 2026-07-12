@@ -11,7 +11,7 @@
 
 TypesenseKit gives operators, automation, and AI agents one typed operation registry for the Typesense Admin API—with a human-friendly CLI and a secure MCP server built on top.
 
-**[Website](https://typesensekit.vercel.app)** · **[CLI guide](https://typesensekit.vercel.app/guides/cli/)** · **[MCP guide](https://typesensekit.vercel.app/guides/mcp/)** · **[Client setup](https://typesensekit.vercel.app/guides/clients/)**
+**[Website](https://typesensekit.vercel.app)** · **[Typesense CLI](https://typesensekit.vercel.app/typesense-cli/)** · **[Typesense MCP](https://typesensekit.vercel.app/typesense-mcp/)** · **[Guides](https://typesensekit.vercel.app/guides/clients/)**
 
 ```sh
 pnpm add -g @typesensekit/cli
@@ -86,7 +86,7 @@ source <(tsk completion bash)
 tsk completion fish | source
 ```
 
-Read the **[complete CLI guide](https://typesensekit.vercel.app/guides/cli/)** for profiles, environment-only use, JSON input, completion, and destructive-operation behavior.
+See the **[Typesense CLI overview](https://typesensekit.vercel.app/typesense-cli/)** or read the **[complete CLI guide](https://typesensekit.vercel.app/guides/cli/)** for profiles, environment-only use, JSON input, completion, and destructive-operation behavior.
 
 ## MCP Server
 
@@ -116,7 +116,7 @@ tsk skills claude-code
 tsk skills hermes
 ```
 
-See the **[MCP guide](https://typesensekit.vercel.app/guides/mcp/)** and **[client setup guide](https://typesensekit.vercel.app/guides/clients/)** for Claude Desktop, Claude Code, Codex, Cursor, generic MCP clients, Streamable HTTP, and Docker.
+See the **[Typesense MCP overview](https://typesensekit.vercel.app/typesense-mcp/)**, **[MCP guide](https://typesensekit.vercel.app/guides/mcp/)**, and **[client setup guide](https://typesensekit.vercel.app/guides/clients/)** for Claude Desktop, Claude Code, Codex, Cursor, generic MCP clients, Streamable HTTP, and Docker.
 
 ### MCP resources
 
