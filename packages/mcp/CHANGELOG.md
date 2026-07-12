@@ -1,5 +1,11 @@
 # @typesensekit/mcp
 
+## 1.4.2
+
+### Patch Changes
+
+- Add official MCP Registry ownership metadata and an `mcp` executable alias for registry clients.
+
 ## 1.3.0
 
 ### Minor Changes
