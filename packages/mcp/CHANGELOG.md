@@ -1,5 +1,14 @@
 # @typesensekit/mcp
 
+## 1.3.0
+
+### Minor Changes
+
+- 8681b76: Add secret-safe structured tool auditing, consistent resource redaction, and real HTTP and stdio transport verification.
+- 3323c2e: Add process-wide MCP tool timeouts, concurrency and rate limits, and bounded serialized responses.
+- e57268d: Return structured MCP results and publish read-only, destructive, idempotent, and open-world tool annotations.
+- 65c719d: Secure Streamable HTTP with loopback binding, Origin validation, bearer authentication, non-loopback startup safeguards, and bounded request bodies.
+
 ## 1.2.0
 
 ### Minor Changes
