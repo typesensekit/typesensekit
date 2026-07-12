@@ -4,6 +4,7 @@ import {
   operations,
 } from "@typesensekit/core";
 import { defineCommand } from "citty";
+import { confirmDestructiveOperation } from "./confirmation.js";
 import {
   renderInputSchema,
   renderOperationExamples,
@@ -44,7 +45,7 @@ function lifecycleArgs() {
     },
     yes: {
       type: "boolean",
-      description: "Confirm destructive production schema changes",
+      description: "Confirm destructive schema changes without prompting",
     },
     timeoutMs: { type: "string", description: "Wait timeout in milliseconds" },
     intervalMs: {
@@ -112,6 +113,10 @@ export function operationCommands() {
           profile: { type: "string", description: "Profile name" },
           config: { type: "string", description: "Profile config path" },
           json: { type: "boolean", description: "Print JSON" },
+          yes: {
+            type: "boolean",
+            description: "Confirm a destructive operation without prompting",
+          },
           debug: {
             type: "boolean",
             description: "Include redacted diagnostic details in errors",
@@ -128,13 +133,14 @@ export function operationCommands() {
             return;
           }
 
-          const client = await resolveClient({
-            profile: args.profile,
-            config: args.config,
-          });
           const input = operation.input.parse({
             ...parseInput(args.input),
             ...operationSpecificInput(operation.name, args),
+          });
+          await confirmDestructiveOperation(operation.name, input, args.yes);
+          const client = await resolveClient({
+            profile: args.profile,
+            config: args.config,
           });
           try {
             const result = await operation.execute(client, input);

@@ -20,6 +20,9 @@ tsk profile import backup.json
 
 Operation results use readable tables where possible. Pass `--json` for stable,
 redacted JSON output in scripts.
+
+Destructive operations prompt before execution. Pass `--yes` only for deliberate
+non-interactive automation.
 tsk collections.list --input '{}'
 tsk skills mcp
 ```

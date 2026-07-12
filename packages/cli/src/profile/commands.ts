@@ -1,5 +1,6 @@
 import { operations, serverConfigSchema } from "@typesensekit/core";
 import { defineCommand } from "citty";
+import { confirmAction } from "../confirmation.js";
 import {
   promptForApiKey,
   readApiKeyFromStdin,
@@ -159,10 +160,12 @@ export const profileCommand = defineCommand({
       meta: { name: "remove", description: "Remove a profile" },
       args: {
         name: { type: "positional", required: true },
+        yes: { type: "boolean", description: "Remove without prompting" },
         config: { type: "string" },
       },
       async run({ args }) {
         const cfg = await loadConfig(args.config);
+        await confirmAction(`remove profile ${args.name}`, args.yes);
         removeProfile(cfg, args.name);
         await saveConfig(cfg, args.config);
         console.log(`Removed profile ${args.name}`);
