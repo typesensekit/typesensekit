@@ -17,7 +17,7 @@ const {
   schema,
 } = Astro.props;
 const canonical = new URL(path, Astro.site);
-const socialImage = new URL("/images/github-og.png", Astro.site);
+const socialImage = new URL("/images/social-card.png", Astro.site);
 const organizationSchema = {
   "@type": "Organization",
   "@id": "https://typesensekit.vercel.app/#organization",
@@ -65,10 +65,14 @@ const serializedSchema = schemaGraph.length > 0 ? JSON.stringify({ "@context": "
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={socialImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="TypesenseKit — operate Typesense from terminal to agent" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content="TypesenseKit — operate Typesense from terminal to agent" />
     {serializedSchema && <script type="application/ld+json" set:html={serializedSchema} is:inline />}
     <title>{title}</title>
   </head>
