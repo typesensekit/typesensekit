@@ -56,4 +56,23 @@ describe("profile store", () => {
     expect(redactApiKey("abcdef123456")).toBe("abcd…3456");
     expect(redactApiKey("short")).toBe("***");
   });
+
+  it("accepts a keychain reference without persisting an API key", async () => {
+    dir = await mkdtemp(join(tmpdir(), "typesensekit-"));
+    const path = join(dir, "config.json");
+    await saveConfig(
+      {
+        profiles: {
+          production: {
+            url: "https://typesense.example.com",
+            apiKeyKeychain: "production",
+          },
+        },
+      },
+      path,
+    );
+    const raw = await readFile(path, "utf8");
+    expect(raw).toContain('"apiKeyKeychain": "production"');
+    expect(raw).not.toContain('"apiKey"');
+  });
 });

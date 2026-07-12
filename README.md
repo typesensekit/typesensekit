@@ -25,7 +25,14 @@ pnpm add -g @typesensekit/cli
 Create and use a profile:
 
 ```sh
-tsk profile add local --url http://localhost:8108 --api-key xyz
+# Securely prompts for the API key without adding it to shell history
+tsk profile add local --url http://localhost:8108
+
+# For scripts, pipe the key over stdin
+printf '%s' "$TYPESENSE_API_KEY" | tsk profile add ci --url https://typesense.example.com --api-key-stdin
+
+# On macOS, keep the secret in Keychain instead of config.json
+tsk profile add production --url https://typesense.example.com --keychain
 tsk profile use local
 tsk collections.list --input '{}'
 ```
