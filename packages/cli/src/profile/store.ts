@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { chmod, mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { serverConfigSchema } from "@typesensekit/core";
 import envPaths from "env-paths";
@@ -33,9 +34,22 @@ export async function saveConfig(
 ): Promise<void> {
   const parsed = profileConfigSchema.parse(config);
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(parsed, null, 2)}\n`, {
-    mode: 0o600,
-  });
+  const temporaryPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  let file: Awaited<ReturnType<typeof open>> | undefined;
+
+  try {
+    file = await open(temporaryPath, "wx", 0o600);
+    await file.writeFile(`${JSON.stringify(parsed, null, 2)}\n`);
+    await file.sync();
+    await file.close();
+    file = undefined;
+    await rename(temporaryPath, path);
+    await chmod(path, 0o600);
+  } catch (error) {
+    await file?.close().catch(() => undefined);
+    await rm(temporaryPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 
 export function redactApiKey(apiKey: string): string {

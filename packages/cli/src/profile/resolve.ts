@@ -14,12 +14,22 @@ export type ResolveOptions = {
 export async function resolveServerConfig(
   options: ResolveOptions = {},
 ): Promise<ServerConfig> {
+  if (options.profile !== undefined || options.config !== undefined) {
+    return resolveStoredProfile(options);
+  }
+
   const envUrl = process.env.TYPESENSE_URL;
   const envApiKey = process.env.TYPESENSE_API_KEY;
   if (envUrl && envApiKey) {
     return serverConfigSchema.parse({ url: envUrl, apiKey: envApiKey });
   }
 
+  return resolveStoredProfile(options);
+}
+
+async function resolveStoredProfile(
+  options: ResolveOptions,
+): Promise<ServerConfig> {
   const config = await loadConfig(options.config);
   const profileName = options.profile ?? config.currentProfile;
   if (!profileName) {

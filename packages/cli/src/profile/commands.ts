@@ -1,6 +1,36 @@
 import { serverConfigSchema } from "@typesensekit/core";
 import { defineCommand } from "citty";
-import { loadConfig, redactApiKey, saveConfig } from "./store.js";
+import {
+  loadConfig,
+  type ProfileConfig,
+  redactApiKey,
+  saveConfig,
+} from "./store.js";
+
+export function removeProfile(cfg: ProfileConfig, name: string): void {
+  if (!cfg.profiles[name]) throw new Error(`Profile not found: ${name}`);
+  delete cfg.profiles[name];
+  if (cfg.currentProfile === name) {
+    cfg.currentProfile = Object.keys(cfg.profiles)[0];
+  }
+}
+
+export function renameProfile(
+  cfg: ProfileConfig,
+  from: string,
+  to: string,
+): void {
+  const profile = cfg.profiles[from];
+  if (!profile) throw new Error(`Profile not found: ${from}`);
+  if (from !== to && cfg.profiles[to]) {
+    throw new Error(`Profile already exists: ${to}`);
+  }
+  if (from === to) return;
+
+  cfg.profiles[to] = profile;
+  delete cfg.profiles[from];
+  if (cfg.currentProfile === from) cfg.currentProfile = to;
+}
 
 export const profileCommand = defineCommand({
   meta: { name: "profile", description: "Manage Typesense server profiles" },
@@ -98,9 +128,7 @@ export const profileCommand = defineCommand({
       },
       async run({ args }) {
         const cfg = await loadConfig(args.config);
-        delete cfg.profiles[args.name];
-        if (cfg.currentProfile === args.name)
-          cfg.currentProfile = Object.keys(cfg.profiles)[0];
+        removeProfile(cfg, args.name);
         await saveConfig(cfg, args.config);
         console.log(`Removed profile ${args.name}`);
       },
@@ -114,11 +142,7 @@ export const profileCommand = defineCommand({
       },
       async run({ args }) {
         const cfg = await loadConfig(args.config);
-        const profile = cfg.profiles[args.from];
-        if (!profile) throw new Error(`Profile not found: ${args.from}`);
-        cfg.profiles[args.to] = profile;
-        delete cfg.profiles[args.from];
-        if (cfg.currentProfile === args.from) cfg.currentProfile = args.to;
+        renameProfile(cfg, args.from, args.to);
         await saveConfig(cfg, args.config);
         console.log(`Renamed ${args.from} to ${args.to}`);
       },

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -30,6 +30,26 @@ describe("profile store", () => {
     );
     await expect(readFile(path, "utf8")).resolves.toContain("localhost");
     expect((await stat(path)).mode & 0o777).toBe(0o600);
+  });
+
+  it("repairs permissions when atomically replacing an existing config", async () => {
+    dir = await mkdtemp(join(tmpdir(), "typesensekit-"));
+    const path = join(dir, "config.json");
+    await saveConfig({ profiles: {} }, path);
+    await chmod(path, 0o644);
+
+    await saveConfig(
+      {
+        currentProfile: "local",
+        profiles: { local: { url: "http://localhost:8108", apiKey: "xyz" } },
+      },
+      path,
+    );
+
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
+    await expect(loadConfig(path)).resolves.toMatchObject({
+      currentProfile: "local",
+    });
   });
 
   it("redacts long and short api keys", () => {
