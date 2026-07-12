@@ -1,5 +1,11 @@
 # @typesensekit/cli
 
+## 1.4.1
+
+### Patch Changes
+
+- Fix the CLI package README formatting so usage guidance and command examples render correctly on npm.
+
 ## 1.4.0
 
 ### Minor Changes

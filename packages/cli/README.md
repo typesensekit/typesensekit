@@ -17,6 +17,7 @@ tsk profile test production
 tsk profile export production > profile.json       # omits plaintext keys
 tsk profile export production --reveal > backup.json
 tsk profile import backup.json
+```
 
 Operation results use readable tables where possible. Pass `--json` for stable,
 redacted JSON output in scripts.
@@ -31,6 +32,10 @@ source <(tsk completion zsh)              # zsh
 source <(tsk completion bash)             # bash
 tsk completion fish | source              # fish
 ```
+
+Discover operations and generate integration snippets:
+
+```sh
 tsk collections.list --input '{}'
 tsk skills mcp
 ```
