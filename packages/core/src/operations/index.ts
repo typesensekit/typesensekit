@@ -3,6 +3,7 @@ import { analyticsOperations } from "./analytics.js";
 import { apiOperations } from "./api.js";
 import { collectionOperations } from "./collections.js";
 import { conversationOperations } from "./conversations.js";
+import { curationSetOperations } from "./curation-sets.js";
 import { documentOperations } from "./documents.js";
 import { keysOperations } from "./keys.js";
 import { overridesOperations } from "./overrides.js";
@@ -21,6 +22,7 @@ export const operations = [
   ...aliasesOperations,
   ...synonymsOperations,
   ...synonymSetOperations,
+  ...curationSetOperations,
   ...overridesOperations,
   ...keysOperations,
   ...analyticsOperations,

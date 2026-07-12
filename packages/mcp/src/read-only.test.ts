@@ -8,6 +8,8 @@ const operations = [
   { name: "documents.get" },
   { name: "documents.get_many" },
   { name: "collections.retrieve" },
+  { name: "curation_sets.list" },
+  { name: "curation_sets.items.retrieve" },
   { name: "documents.index" },
   { name: "collections.delete" },
   { name: "keys.retrieve" },
@@ -23,6 +25,8 @@ describe("MCP read-only operation filtering", () => {
       "documents.get",
       "documents.get_many",
       "collections.retrieve",
+      "curation_sets.list",
+      "curation_sets.items.retrieve",
     ]);
   });
 

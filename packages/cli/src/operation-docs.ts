@@ -56,6 +56,20 @@ const EXAMPLES: Record<string, JsonValue[]> = {
       timeoutMs: 60000,
     },
   ],
+  "curation_sets.upsert": [
+    {
+      name: "products-core",
+      value: {
+        items: [
+          {
+            id: "featured-chair",
+            rule: { query: "chair", match: "exact" },
+            includes: [{ id: "sku-1", position: 1 }],
+          },
+        ],
+      },
+    },
+  ],
   "documents.index": [
     {
       collection: "products",
