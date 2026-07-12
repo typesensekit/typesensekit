@@ -1,5 +1,11 @@
 # @typesensekit/cli
 
+## 1.4.3
+
+### Patch Changes
+
+- 90c4ed3: Improve npm discovery metadata and link each package to its dedicated Typesense CLI or Typesense MCP product page.
+
 ## 1.4.1
 
 ### Patch Changes
