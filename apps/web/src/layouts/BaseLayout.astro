@@ -52,10 +52,12 @@ const serializedSchema = schemaGraph.length > 0 ? JSON.stringify({ "@context": "
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
-    <meta name="theme-color" content="#071013" />
+    <meta name="theme-color" content="#c0ff58" />
     <meta name="description" content={description} />
     <meta name="google-site-verification" content="DEZBH2dmhycBuxMl4CAnDAZw_rSTNtQNiQljZrmy2vg" />
-    <link rel="icon" href="/images/github-og.png" type="image/png" />
+    <link rel="icon" href="/images/typesensekit-robot-favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/images/typesensekit-robot-favicon-180.png" />
     <link rel="canonical" href={canonical} />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="TypesenseKit" />
@@ -75,7 +77,7 @@ const serializedSchema = schemaGraph.length > 0 ? JSON.stringify({ "@context": "
     <header class="site-header">
       <nav class="nav-shell" aria-label="Primary navigation">
         <a class="brand" href="/" aria-label="TypesenseKit home">
-          <span class="brand-mark" aria-hidden="true">⌕</span>
+          <img class="brand-mark brand-mark-image" src="/images/typesensekit-robot-neon-512.png" alt="" width="34" height="34" />
           <span>Typesense<span>Kit</span></span>
         </a>
         <div class="nav-links">
@@ -94,7 +96,7 @@ const serializedSchema = schemaGraph.length > 0 ? JSON.stringify({ "@context": "
       <div class="footer-shell">
         <div>
           <a class="brand footer-brand" href="/">
-            <span class="brand-mark" aria-hidden="true">⌕</span>
+            <img class="brand-mark brand-mark-image" src="/images/typesensekit-robot-neon-512.png" alt="" width="34" height="34" loading="lazy" />
             <span>Typesense<span>Kit</span></span>
           </a>
           <p>One toolkit for Typesense operators and AI agents.</p>

@@ -2,17 +2,17 @@
 
 :root {
   color-scheme: dark;
-  --bg: #050a0c;
-  --panel: #0b171b;
-  --line: #1b343b;
-  --line-bright: #27545c;
-  --text: #eff8f7;
-  --muted: #8ca5a9;
-  --teal: #18d2d0;
-  --teal-bright: #43e7df;
-  --teal-dim: #0c8588;
-  --amber: #ffbf3e;
-  --green: #4ce0a0;
+  --bg: #050705;
+  --panel: #0c1209;
+  --line: #26341d;
+  --line-bright: #40592b;
+  --text: #f7fbea;
+  --muted: #9aaa8c;
+  --teal: #c0ff58;
+  --teal-bright: #dcff9f;
+  --teal-dim: #78a83d;
+  --amber: #f2ffad;
+  --green: #a8ef4b;
   --sans: "DM Sans", system-ui, sans-serif;
   --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
   --max: 1180px;
@@ -32,7 +32,7 @@ body {
   margin: 0;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 70% 0%, rgb(12 133 136 / 10%), transparent 26rem),
+    radial-gradient(circle at 70% 0%, rgb(192 255 88 / 13%), transparent 26rem),
     var(--bg);
   color: var(--text);
   font-family: var(--sans);
@@ -126,8 +126,8 @@ pre {
   position: sticky;
   z-index: 50;
   top: 0;
-  border-bottom: 1px solid rgb(39 84 92 / 45%);
-  background: rgb(5 10 12 / 76%);
+  border-bottom: 1px solid rgb(120 168 61 / 42%);
+  background: rgb(5 7 5 / 78%);
   backdrop-filter: blur(18px);
 }
 .nav-shell {
@@ -156,10 +156,18 @@ pre {
   place-items: center;
   border: 1px solid var(--teal-dim);
   border-radius: 10px;
-  background: rgb(24 210 208 / 8%);
+  background: rgb(192 255 88 / 9%);
   color: var(--teal);
   font-family: var(--mono);
   font-size: 1.5rem;
+}
+.brand-mark-image {
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border-color: var(--teal-dim);
+  background: var(--teal);
+  object-fit: cover;
 }
 .nav-links {
   display: flex;
@@ -193,9 +201,9 @@ pre {
   bottom: 8%;
   width: 520px;
   height: 520px;
-  border: 1px solid rgb(24 210 208 / 14%);
+  border: 1px solid rgb(192 255 88 / 17%);
   border-radius: 50%;
-  box-shadow: inset 0 0 120px rgb(24 210 208 / 5%);
+  box-shadow: inset 0 0 120px rgb(192 255 88 / 7%);
   content: "";
 }
 .hero-grid {
@@ -223,7 +231,7 @@ pre {
   background: linear-gradient(
     105deg,
     var(--teal-bright),
-    #6df1bd 62%,
+    #e7ffb7 62%,
     var(--amber)
   );
   background-clip: text;
@@ -258,13 +266,13 @@ pre {
 .button:hover {
   transform: translateY(-2px);
   border-color: var(--teal-dim);
-  background: rgb(24 210 208 / 7%);
+  background: rgb(192 255 88 / 8%);
 }
 .button.primary {
   border-color: var(--teal);
   background: var(--teal);
-  box-shadow: 0 12px 35px rgb(24 210 208 / 19%);
-  color: #031112;
+  box-shadow: 0 12px 35px rgb(192 255 88 / 20%);
+  color: #101608;
 }
 .button.primary:hover {
   background: var(--teal-bright);
@@ -389,7 +397,7 @@ pre {
   height: 48px;
   place-items: center;
   border-radius: 12px;
-  background: rgb(24 210 208 / 11%);
+  background: rgb(192 255 88 / 11%);
   color: var(--teal);
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -439,7 +447,7 @@ pre {
   padding: clamp(1.6rem, 4vw, 2.4rem);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(145deg, rgb(15 31 36 / 96%), rgb(8 18 21 / 96%));
+  background: linear-gradient(145deg, rgb(23 32 16 / 96%), rgb(9 14 7 / 96%));
 }
 .product-card::after {
   position: absolute;
@@ -447,7 +455,7 @@ pre {
   right: -60px;
   width: 180px;
   height: 180px;
-  border: 1px solid rgb(24 210 208 / 18%);
+  border: 1px solid rgb(192 255 88 / 19%);
   border-radius: 50%;
   content: "";
 }
@@ -570,8 +578,8 @@ pre {
   justify-content: center;
   padding: clamp(1.4rem, 4vw, 2.5rem);
   background:
-    radial-gradient(circle at center, rgb(24 210 208 / 8%), transparent 65%),
-    #091317;
+    radial-gradient(circle at center, rgb(192 255 88 / 9%), transparent 65%),
+    #0a1008;
 }
 .agent-kicker {
   margin-bottom: 1.4rem;
@@ -630,7 +638,7 @@ pre {
 }
 .comparison th:last-child,
 .comparison td:last-child {
-  background: rgb(24 210 208 / 4%);
+  background: rgb(192 255 88 / 5%);
 }
 .comparison td:first-child {
   color: #a5b9bb;
@@ -723,8 +731,8 @@ pre {
   border: 1px solid var(--line-bright);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 85% 20%, rgb(24 210 208 / 15%), transparent 18rem),
-    linear-gradient(135deg, #0e2125, #081114);
+    radial-gradient(circle at 85% 20%, rgb(192 255 88 / 17%), transparent 18rem),
+    linear-gradient(135deg, #15200e, #080d06);
   text-align: center;
 }
 .final-cta h2 {
@@ -880,7 +888,7 @@ pre {
 .guide-content a:not(.button) {
   color: var(--teal);
   text-decoration: underline;
-  text-decoration-color: rgb(24 210 208 / 35%);
+  text-decoration-color: rgb(192 255 88 / 38%);
   text-underline-offset: 0.2em;
 }
 .guide-content ul,
@@ -896,7 +904,7 @@ pre {
   border: 1px solid var(--line-bright);
   border-left: 3px solid var(--teal);
   border-radius: 10px;
-  background: rgb(24 210 208 / 4%);
+  background: rgb(192 255 88 / 5%);
   color: #a8bdbf;
 }
 .callout strong {
@@ -939,7 +947,7 @@ pre {
   padding: 1.5rem;
   border: 1px solid var(--line-bright);
   border-radius: 14px;
-  background: linear-gradient(135deg, #102126, #091316);
+  background: linear-gradient(135deg, #17220f, #0a1008);
 }
 .guide-star .eyebrow {
   margin-bottom: 0.5rem;
@@ -982,7 +990,7 @@ pre {
   padding: clamp(1.3rem, 4vw, 2rem);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius);
-  background: linear-gradient(145deg, rgb(15 31 36 / 98%), rgb(7 15 18 / 98%));
+  background: linear-gradient(145deg, rgb(23 32 16 / 98%), rgb(8 12 6 / 98%));
   box-shadow: var(--shadow);
 }
 .seo-install .card-label {
