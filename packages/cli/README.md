@@ -5,7 +5,7 @@ configuration, and cluster administration.
 
 **[Typesense CLI overview](https://typesensekit.vercel.app/typesense-cli/)** ·
 **[Complete CLI guide](https://typesensekit.vercel.app/guides/cli/)** ·
-**[GitHub](https://github.com/akshitkrnagpal/typesensekit)**
+**[GitHub](https://github.com/typesensekit/typesensekit)**
 
 ```sh
 pnpm add -g @typesensekit/cli
@@ -45,5 +45,5 @@ tsk collections.list --input '{}'
 tsk skills mcp
 ```
 
-See the [API coverage inventory](https://github.com/akshitkrnagpal/typesensekit/blob/main/docs/api-coverage.md)
+See the [API coverage inventory](https://github.com/typesensekit/typesensekit/blob/main/docs/api-coverage.md)
 for supported Typesense operations.
