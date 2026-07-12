@@ -5,7 +5,7 @@ import {
   operations,
   redactSecrets,
 } from "@typesensekit/core";
-import type { z } from "zod";
+import { z } from "zod";
 import packageJson from "../package.json" with { type: "json" };
 import { readEnvConfig, readMcpOptions } from "./env.js";
 import {
@@ -14,6 +14,7 @@ import {
 } from "./execution.js";
 import { filterMcpOperations } from "./read-only.js";
 import { registerTypesenseResources } from "./resources.js";
+import { operationToolAnnotations } from "./tool-metadata.js";
 
 type ToolShape = z.ZodObject<z.ZodRawShape>;
 
@@ -55,6 +56,8 @@ export function createTypesenseMcpServer(
         title: operation.name,
         description: operation.summary,
         inputSchema: toToolShape(operation.input),
+        outputSchema: { result: z.unknown() },
+        annotations: operationToolAnnotations(operation),
       },
       async (args) => {
         try {
@@ -64,6 +67,7 @@ export function createTypesenseMcpServer(
           );
           const safeResult = redactSecrets(result);
           return {
+            structuredContent: { result: safeResult },
             content: [
               {
                 type: "text",

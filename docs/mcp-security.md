@@ -100,6 +100,9 @@ TYPESENSEKIT_MCP_MAX_RESPONSE_BYTES=1048576
   generated key values from tool output and errors.
 - Treat `documents.export` as sensitive. It is read-only, but it can return a
   large amount of data if the API key and collection scope allow it.
+- Tool listings include MCP read-only, destructive, idempotent, and open-world
+  annotations. Successful calls return redacted JSON in both `structuredContent`
+  and a backwards-compatible text block.
 
 ## Compatibility
 
