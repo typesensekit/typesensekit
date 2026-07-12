@@ -28,6 +28,8 @@ describe("operation registry", () => {
         "nl_search_models.create",
         "operations.schema_changes",
         "operations.snapshot",
+        "analytics.events.list",
+        "analytics.status",
         "api.call",
         "health",
       ]),

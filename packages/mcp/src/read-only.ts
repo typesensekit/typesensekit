@@ -4,6 +4,10 @@ import type { z } from "zod";
 export const READ_ONLY_OPERATION_NAMES = new Set([
   "aliases.list",
   "aliases.retrieve",
+  "analytics.events.list",
+  "analytics.rules.list",
+  "analytics.rules.retrieve",
+  "analytics.status",
   "collections.list",
   "collections.retrieve",
   "collections.wait",

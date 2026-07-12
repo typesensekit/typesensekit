@@ -126,7 +126,7 @@ TypesenseKit covers the common Typesense administration and search surfaces, plu
 | Search | search, multi-search, facet exploration, suggestions |
 | Configuration | aliases, global synonym and curation sets, legacy collection overrides/synonyms, stopwords, stemming dictionaries, presets |
 | Access | API keys |
-| Analytics | rules and events |
+| Analytics | rule create/update/filter, event create/retrieve, status and flush |
 | AI search | natural-language search models, conversation models and history |
 | System | health, metrics, stats, debug, schema-change status, snapshot, vote, cache clear, database compaction, slow-request logging |
 | Escape hatch | raw HTTP calls through `api.call` |

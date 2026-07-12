@@ -19,6 +19,22 @@ type JsonSchema = {
 };
 
 const EXAMPLES: Record<string, JsonValue[]> = {
+  "analytics.events.list": [
+    {
+      userId: "user-1",
+      name: "product_click",
+      limit: 100,
+    },
+  ],
+  "analytics.rules.create": [
+    {
+      value: {
+        name: "product_clicks",
+        type: "counter",
+        params: { source: { collections: ["products"] } },
+      },
+    },
+  ],
   "api.call": [
     {
       method: "get",
