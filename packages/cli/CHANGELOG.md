@@ -1,5 +1,11 @@
 # @typesensekit/cli
 
+## 1.4.4
+
+### Patch Changes
+
+- 7c3eee5: Move package repository metadata and the MCP Registry identity to the TypesenseKit GitHub organization.
+
 ## 1.4.3
 
 ### Patch Changes

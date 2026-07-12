@@ -1,6 +1,6 @@
 {
   "name": "@typesensekit/cli",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "type": "module",
   "main": "dist/cli.js",
   "types": "dist/cli.d.ts",
