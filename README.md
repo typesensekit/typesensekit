@@ -117,14 +117,14 @@ The MCP server also exposes resources:
 
 ## API Coverage
 
-TypesenseKit covers the common Typesense administration and search surfaces, plus `api.call` for endpoints that are new, uncommon, or not yet wrapped.
+TypesenseKit targets the Typesense v30.2 API for current first-class operations, plus `api.call` for endpoints that are new, uncommon, or not yet wrapped. The detailed operation inventory is generated from the shared registry in [`docs/api-coverage.md`](./docs/api-coverage.md).
 
 | Area | Operations |
 | --- | --- |
 | Collections | list, get, create, update, delete, schema changes |
 | Documents | index, upsert, get, get many, update, delete, import, export, search |
 | Search | search, multi-search, facet exploration, suggestions |
-| Configuration | aliases, global synonym and curation sets, legacy collection overrides/synonyms, stopwords, stemming dictionaries, presets |
+| Configuration | aliases, global synonym and curation sets, v27-v29 collection overrides/synonyms, stopwords, stemming dictionaries, presets |
 | Access | API keys |
 | Analytics | rule create/update/filter, event create/retrieve, status and flush |
 | AI search | natural-language search models, conversation models and history |
@@ -183,7 +183,7 @@ Run local Typesense:
 docker run -p 8108:8108 \
   -e TYPESENSE_API_KEY=xyz \
   -e TYPESENSE_DATA_DIR=/data \
-  typesense/typesense:27.1 --enable-cors
+  typesense/typesense:30.2 --enable-cors
 ```
 
 Useful scripts:

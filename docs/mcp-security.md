@@ -98,7 +98,8 @@ TYPESENSEKIT_READ_ONLY=true
 
 | TypesenseKit MCP version | Typesense client | Typesense server guidance |
 | --- | --- | --- |
-| 1.1.x | `typesense` npm package `^3.0.6` | Built for the current Typesense Admin API surface and local development against Typesense 27.1. Includes v30 global synonym set operations. |
+| 1.1.x | `typesense` npm package `^3.0.6` | Initial v27-oriented operation set with selected v30 global synonym support. |
+| 1.2.x | `typesense` npm package `^3.0.6` | Targets Typesense v30.2 first-class APIs. Retains collection-level `synonyms.*` and `overrides.*` for v27-v29 compatibility and migrations. |
 
 TypesenseKit also exposes `api.call` when read-only mode is disabled, so newer
 Typesense endpoints can still be reached before a first-class operation is

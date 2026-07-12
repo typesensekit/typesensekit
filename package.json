@@ -13,9 +13,11 @@
     "test": "vitest run",
     "lint": "biome check .",
     "format": "biome format --write .",
+    "docs:coverage": "pnpm build && node scripts/generate-api-coverage.mjs",
+    "docs:check": "node scripts/generate-api-coverage.mjs --check",
     "changeset": "changeset",
     "release": "changeset publish",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm docs:check",
     "pack:dry": "npm pack --dry-run --json ./packages/cli && npm pack --dry-run --json ./packages/mcp",
     "prepublishOnly": "pnpm check"
   },
