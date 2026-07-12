@@ -103,6 +103,22 @@ describe("redactSecrets", () => {
     });
   });
 
+  it("redacts provider credential suffixes", () => {
+    expect(
+      redactSecrets({
+        access_token: "access-value",
+        refresh_token: "refresh-value",
+        client_secret: "client-value",
+        nested: { serviceToken: "service-value" },
+      }),
+    ).toEqual({
+      access_token: "[REDACTED]",
+      refresh_token: "[REDACTED]",
+      client_secret: "[REDACTED]",
+      nested: { serviceToken: "[REDACTED]" },
+    });
+  });
+
   it("does not redact unrelated value fields globally", () => {
     expect(redactSecrets({ value: "visible", label: "example" })).toEqual({
       value: "visible",

@@ -127,7 +127,7 @@ TypesenseKit covers the common Typesense administration and search surfaces, plu
 | Configuration | aliases, global synonym and curation sets, legacy collection overrides/synonyms, stopwords, stemming dictionaries, presets |
 | Access | API keys |
 | Analytics | rules and events |
-| Conversations | models and history |
+| AI search | natural-language search models, conversation models and history |
 | System | health, metrics, stats, debug |
 | Escape hatch | raw HTTP calls through `api.call` |
 
@@ -150,6 +150,13 @@ Custom stemming dictionaries are available through `stemming.dictionaries.*`:
 ```sh
 tsk stemming.dictionaries.list --input '{}' --json
 tsk stemming.dictionaries.import --input dictionary.json --json
+```
+
+Natural-language search models are available through `nl_search_models.*`:
+
+```sh
+tsk nl_search_models.list --input '{}' --json
+tsk nl_search_models.create --input model.json --json
 ```
 
 ## Why It Exists

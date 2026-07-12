@@ -98,6 +98,16 @@ const EXAMPLES: Record<string, JsonValue[]> = {
       collections: ["products"],
     },
   ],
+  "nl_search_models.create": [
+    {
+      value: {
+        id: "product-search",
+        model_name: "openai/gpt-4.1-mini",
+        api_key: "your-provider-api-key",
+        temperature: 0,
+      },
+    },
+  ],
   "search.facets": [
     {
       collection: "products",

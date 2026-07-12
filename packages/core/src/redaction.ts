@@ -13,7 +13,12 @@ const SECRET_KEYS = new Set([
 
 function shouldRedactKey(key: string): boolean {
   const normalized = key.toLowerCase().replace(/[-_\s]/g, "");
-  return SECRET_KEYS.has(normalized) || normalized.endsWith("apikey");
+  return (
+    SECRET_KEYS.has(normalized) ||
+    normalized.endsWith("apikey") ||
+    normalized.endsWith("token") ||
+    normalized.endsWith("secret")
+  );
 }
 
 function isTypesenseApiKeyShape(value: Record<string, unknown>): boolean {

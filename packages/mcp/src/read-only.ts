@@ -22,6 +22,8 @@ export const READ_ONLY_OPERATION_NAMES = new Set([
   "health",
   "metrics",
   "multi_search",
+  "nl_search_models.list",
+  "nl_search_models.retrieve",
   "overrides.list",
   "overrides.retrieve",
   "presets.list",
