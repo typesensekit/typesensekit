@@ -12,6 +12,11 @@ printf '%s' "$TYPESENSE_API_KEY" | tsk profile add ci --url https://typesense.ex
 
 # macOS Keychain-backed profile
 tsk profile add production --url https://typesense.example.com --keychain
+
+tsk profile test production
+tsk profile export production > profile.json       # omits plaintext keys
+tsk profile export production --reveal > backup.json
+tsk profile import backup.json
 tsk collections.list --input '{}'
 tsk skills mcp
 ```

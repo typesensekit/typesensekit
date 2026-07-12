@@ -1,10 +1,16 @@
-import { serverConfigSchema } from "@typesensekit/core";
+import { operations, serverConfigSchema } from "@typesensekit/core";
 import { defineCommand } from "citty";
 import {
   promptForApiKey,
   readApiKeyFromStdin,
   saveKeychainApiKey,
 } from "./credentials.js";
+import {
+  exportProfiles,
+  mergeProfileImport,
+  readProfileImport,
+} from "./portability.js";
+import { resolveClient } from "./resolve.js";
 import {
   loadConfig,
   type ProfileConfig,
@@ -174,6 +180,67 @@ export const profileCommand = defineCommand({
         renameProfile(cfg, args.from, args.to);
         await saveConfig(cfg, args.config);
         console.log(`Renamed ${args.from} to ${args.to}`);
+      },
+    }),
+    test: defineCommand({
+      meta: {
+        name: "test",
+        description: "Test a profile's cluster connection",
+      },
+      args: {
+        name: { type: "positional", description: "Profile name" },
+        config: { type: "string", description: "Config file path" },
+      },
+      async run({ args }) {
+        const health = operations.find(
+          (operation) => operation.name === "health",
+        );
+        if (!health) throw new Error("Health operation is unavailable");
+        const client = await resolveClient({
+          profile: args.name,
+          config: args.config,
+        });
+        const result = await health.execute(client, {});
+        console.log(JSON.stringify(result, null, 2));
+      },
+    }),
+    export: defineCommand({
+      meta: {
+        name: "export",
+        description: "Export one or all profiles as JSON",
+      },
+      args: {
+        name: { type: "positional", description: "Profile name; omit for all" },
+        reveal: { type: "boolean", description: "Include plaintext API keys" },
+        config: { type: "string", description: "Config file path" },
+      },
+      async run({ args }) {
+        const cfg = await loadConfig(args.config);
+        console.log(
+          JSON.stringify(exportProfiles(cfg, args.name, args.reveal), null, 2),
+        );
+      },
+    }),
+    import: defineCommand({
+      meta: { name: "import", description: "Import profiles from JSON" },
+      args: {
+        source: {
+          type: "positional",
+          default: "-",
+          description: "JSON file path, or - for stdin",
+        },
+        overwrite: {
+          type: "boolean",
+          description: "Replace profiles with matching names",
+        },
+        config: { type: "string", description: "Config file path" },
+      },
+      async run({ args }) {
+        const cfg = await loadConfig(args.config);
+        const imported = await readProfileImport(args.source);
+        const merged = mergeProfileImport(cfg, imported, args.overwrite);
+        await saveConfig(merged, args.config);
+        console.log("Imported profiles");
       },
     }),
   },
