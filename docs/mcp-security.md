@@ -76,11 +76,14 @@ Optional:
 ```sh
 TYPESENSE_CONNECTION_TIMEOUT_SECONDS=5
 TYPESENSEKIT_READ_ONLY=true
+TYPESENSEKIT_MCP_BEARER_TOKEN=replace-with-a-long-random-token
 ```
 
 ## Production Guidance
 
 - Run the MCP server in read-only mode by default.
+- Keep HTTP on loopback or configure bearer authentication before binding to a
+  non-loopback interface.
 - Prefer a dedicated API key per MCP deployment so it can be rotated without
   impacting application traffic.
 - Set a short Typesense connection timeout for assistant workflows. Long

@@ -11,6 +11,7 @@ TypesenseKit ships two MCP entrypoints:
 TYPESENSE_URL=http://localhost:8108 \
 TYPESENSE_API_KEY=xyz \
 TYPESENSEKIT_MCP_PORT=3000 \
+TYPESENSEKIT_MCP_BEARER_TOKEN=replace-with-a-long-random-token \
 pnpm --filter @typesensekit/mcp exec typesensekit-mcp-http
 ```
 
@@ -21,6 +22,10 @@ Optional environment:
 
 ```sh
 TYPESENSEKIT_MCP_PATH=/mcp
+TYPESENSEKIT_MCP_HOST=127.0.0.1
+TYPESENSEKIT_MCP_ALLOWED_ORIGINS=https://your-mcp-client.example
+TYPESENSEKIT_MCP_MAX_BODY_BYTES=1048576
+TYPESENSEKIT_MCP_BEARER_TOKEN=replace-with-a-long-random-token
 TYPESENSEKIT_READ_ONLY=true
 TYPESENSE_CONNECTION_TIMEOUT_SECONDS=5
 ```
@@ -39,6 +44,7 @@ Run the image:
 docker run --rm -p 3000:3000 \
   -e TYPESENSE_URL=https://your-cluster.typesense.net \
   -e TYPESENSE_API_KEY=your-scoped-api-key \
+  -e TYPESENSEKIT_MCP_BEARER_TOKEN=replace-with-a-long-random-token \
   -e TYPESENSEKIT_READ_ONLY=true \
   typesensekit-mcp
 ```
@@ -62,10 +68,17 @@ services:
         sync: false
       - key: TYPESENSEKIT_READ_ONLY
         value: "true"
+      - key: TYPESENSEKIT_MCP_BEARER_TOKEN
+        sync: false
+      - key: TYPESENSEKIT_MCP_ALLOWED_ORIGINS
+        value: "https://your-mcp-client.example"
       - key: TYPESENSE_CONNECTION_TIMEOUT_SECONDS
         value: "5"
 ```
 
-Keep the service private unless the client performs authentication in front of
-it. TypesenseKit's HTTP entrypoint does not add its own authentication layer; it
-relies on the deployment boundary and the scoped Typesense API key.
+The server binds to `127.0.0.1` by default. The Docker image explicitly binds to
+`0.0.0.0` and therefore requires `TYPESENSEKIT_MCP_BEARER_TOKEN`. If an
+authenticating reverse proxy owns the trust boundary, explicitly set
+`TYPESENSEKIT_MCP_ALLOW_UNAUTHENTICATED=true` and keep the service unreachable
+except through that proxy. Browser Origins are rejected unless they match the
+local defaults or `TYPESENSEKIT_MCP_ALLOWED_ORIGINS`.
