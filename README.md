@@ -1,6 +1,8 @@
-# TypesenseKit
+<p align="center">
+  <img src="./assets/readme-icon.png" alt="TypesenseKit robot icon" width="160">
+</p>
 
-![TypesenseKit GitHub hero banner](./assets/github-hero.png)
+<h1 align="center">TypesenseKit</h1>
 
 [![CI](https://github.com/typesensekit/typesensekit/actions/workflows/ci.yml/badge.svg)](https://github.com/typesensekit/typesensekit/actions/workflows/ci.yml)
 [![CLI on npm](https://img.shields.io/npm/v/@typesensekit/cli?label=CLI)](https://www.npmjs.com/package/@typesensekit/cli)
