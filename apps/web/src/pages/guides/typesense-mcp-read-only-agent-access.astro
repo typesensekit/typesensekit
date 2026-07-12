@@ -1,0 +1,89 @@
+---
+import CopyCode from "../../components/CopyCode.astro";
+import GuideLayout from "../../layouts/GuideLayout.astro";
+
+const toc = [
+  { href: "#model", label: "Access model" },
+  { href: "#start", label: "Start read-only" },
+  { href: "#key", label: "Scope the API key" },
+  { href: "#verify", label: "Verify boundaries" },
+  { href: "#sensitive", label: "Sensitive reads" },
+  { href: "#writes", label: "Enable writes safely" },
+];
+
+const readOnlyStart = [
+  "TYPESENSEKIT_READ_ONLY=true \\",
+  "TYPESENSE_URL=https://your-cluster.typesense.net \\",
+  "TYPESENSE_API_KEY=your-scoped-api-key \\",
+  "pnpm dlx @typesensekit/mcp",
+].join("\n");
+const boundaryPrompt = [
+  "List the Typesense tools available to you.",
+  "Confirm whether any tool can create, update, delete, manage keys, or call a raw API endpoint.",
+  "Do not execute any cluster operation.",
+].join("\n");
+const fullAccessStart = [
+  "TYPESENSEKIT_READ_ONLY=false \\",
+  "TYPESENSE_URL=https://your-cluster.typesense.net \\",
+  "TYPESENSE_API_KEY=your-workflow-specific-key \\",
+  "pnpm dlx @typesensekit/mcp",
+].join("\n");
+---
+
+<GuideLayout
+  title="Give an AI agent read-only Typesense access"
+  description="Use TypesenseKit's read-only MCP default with a scoped Typesense API key, verify the exposed tools, and enable writes only for controlled workflows."
+  eyebrow="Safe agent access"
+  {toc}
+  previous={{ href: "/guides/typesense-mcp-claude-code/", label: "Connect Claude Code" }}
+  next={{ href: "/guides/mcp/", label: "Review MCP transports and security" }}
+>
+  <h2 id="model">Use two independent safety boundaries</h2>
+  <p>Agent access should be limited twice: TypesenseKit decides which tools the MCP client can see, and the Typesense API key decides which requests the cluster will accept.</p>
+  <ol>
+    <li><strong>MCP tool boundary:</strong> read-only mode hides write, delete, key-management, and raw API operations.</li>
+    <li><strong>Typesense authorization boundary:</strong> a scoped key restricts actions and collections even if the MCP configuration changes.</li>
+  </ol>
+  <p>Use both. A hidden tool is not a substitute for cluster authorization, and a scoped key does not stop an agent from attempting irrelevant operations.</p>
+
+  <h2 id="start">Start the MCP server read-only</h2>
+  <p>Read-only mode is the default. Leave <code>TYPESENSEKIT_READ_ONLY</code> unset or set it explicitly to <code>true</code>.</p>
+  <CopyCode code={readOnlyStart} />
+  <p>This mode includes search, document reads and exports, collection schemas and metadata, configuration reads, system health, metrics, stats, and other non-mutating operations from the 95-operation registry.</p>
+
+  <h2 id="key">Create a narrowly scoped Typesense key</h2>
+  <p>Start from the exact collections and actions the agent needs. For a search-only assistant, create a key limited to document search on the relevant collection.</p>
+  <CopyCode code={'tsk keys.create --input \'{"description":"Read-only product search agent","actions":["documents:search"],"collections":["products"]}\''} />
+  <p>Store the generated key in the MCP client's environment or secret manager. Do not put it in a repository, prompt, shell history, or shared screenshot.</p>
+  <div class="callout"><strong>Broaden deliberately.</strong> Schema inspection, document retrieval, exports, and system metrics may require additional Typesense actions. Add only the actions the workflow has demonstrated it needs.</div>
+
+  <h2 id="verify">Verify the effective boundary</h2>
+  <p>TypesenseKit exposes two resources that make the current operation surface inspectable:</p>
+  <ul>
+    <li><code>typesensekit://operations</code> — operations active in the current MCP mode.</li>
+    <li><code>typesensekit://read-only-tools</code> — tool names included in the safe default.</li>
+  </ul>
+  <p>After connecting the server, verify all three layers:</p>
+  <ol>
+    <li>The MCP client lists TypesenseKit as connected.</li>
+    <li>Write, delete, key-management, and <code>api.call</code> tools are absent.</li>
+    <li>The scoped API key rejects requests outside its allowed actions and collections.</li>
+  </ol>
+  <CopyCode code={boundaryPrompt} label="Boundary check prompt" />
+
+  <h2 id="sensitive">Treat read access as sensitive</h2>
+  <p>Read-only does not mean harmless. Document retrieval and exports can expose customer, catalog, analytics, or internal operational data. Search queries may also reveal information an end user should not see.</p>
+  <ul>
+    <li>Use separate keys for separate agents and environments.</li>
+    <li>Restrict collections as well as actions.</li>
+    <li>Avoid document export unless the workflow requires bulk access.</li>
+    <li>Keep production and development configurations separate.</li>
+    <li>Review MCP host logs and tool approvals where available.</li>
+  </ul>
+
+  <h2 id="writes">Enable writes only for a controlled workflow</h2>
+  <p>Set <code>TYPESENSEKIT_READ_ONLY=false</code> only after defining the required mutations, approval behavior, rollback plan, and scoped Typesense key.</p>
+  <CopyCode code={fullAccessStart} />
+  <p>Full mode exposes document writes, destructive operations, key management, and the raw <code>api.call</code> escape hatch. The MCP host controls user approvals; TypesenseKit provides safety annotations and keeps the default surface narrow.</p>
+  <p>Before production use, read the <a href="https://github.com/akshitkrnagpal/typesensekit/blob/main/docs/mcp-security.md">complete MCP security guidance</a>.</p>
+</GuideLayout>

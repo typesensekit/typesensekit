@@ -41,7 +41,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "Open-source Typesense MCP server for secure search and cluster operations from AI agents.",
+  "description": "95 typed Typesense operations for AI agents through an MCP server that is read-only by default.",
   "license": "MIT",
   "author": "Akshit Kr Nagpal",
   "repository": {

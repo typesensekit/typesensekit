@@ -31,6 +31,7 @@ const toc = [
   <p>TypesenseKit exposes search, document reads, collection metadata, configuration reads, and system status operations by default. Write, delete, key-management, and raw API tools stay hidden.</p>
   <div class="callout"><strong>No flag is required.</strong> An unset <code>TYPESENSEKIT_READ_ONLY</code> value is interpreted as read-only.</div>
   <p>This is the recommended mode for assistant search, support investigation, relevance debugging, and cluster inspection.</p>
+  <p>Use the <a href="/guides/typesense-mcp-read-only-agent-access/">read-only Typesense agent access guide</a> to combine the MCP tool boundary with a scoped Typesense API key and verify the effective permissions.</p>
 
   <h2 id="full-access">Opt in to full access</h2>
   <p>Set <code>TYPESENSEKIT_READ_ONLY=false</code> only when an agent must mutate data or administer the cluster.</p>

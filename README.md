@@ -9,7 +9,7 @@
 
 ## Operate Typesense from your terminal or AI agent
 
-TypesenseKit gives operators, automation, and AI agents one typed operation registry for the Typesense Admin API—with a human-friendly CLI and a secure MCP server built on top.
+TypesenseKit gives humans and AI agents the same **95 typed Typesense operations** through a human-friendly CLI and secure MCP server. MCP access is **read-only by default**; write, delete, key-management, and raw API tools require explicit opt-in.
 
 **[Website](https://typesensekit.vercel.app)** · **[Typesense CLI](https://typesensekit.vercel.app/typesense-cli/)** · **[Typesense MCP](https://typesensekit.vercel.app/typesense-mcp/)** · **[Guides](https://typesensekit.vercel.app/guides/clients/)**
 

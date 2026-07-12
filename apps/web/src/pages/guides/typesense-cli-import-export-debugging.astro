@@ -1,0 +1,118 @@
+---
+import CopyCode from "../../components/CopyCode.astro";
+import GuideLayout from "../../layouts/GuideLayout.astro";
+
+const importInput = `{
+  "collection": "products",
+  "action": "upsert",
+  "documents": [
+    { "id": "sku-1", "title": "Oak chair", "price": 289 },
+    { "id": "sku-2", "title": "Walnut chair", "price": 349 }
+  ]
+}`;
+
+const inspectCommands = [
+  "tsk documents.import --schema",
+  "tsk documents.import --examples",
+  "tsk documents.export --schema",
+].join("\n");
+const exportAll = [
+  "tsk documents.export \\",
+  "  --input '{\"collection\":\"products\"}' \\",
+  "  --json | jq -r . > products.jsonl",
+].join("\n");
+const exportFiltered = [
+  "tsk documents.export \\",
+  "  --input '{\"collection\":\"products\",\"params\":{\"filter_by\":\"in_stock:=true\",\"include_fields\":\"id,title,price\"}}' \\",
+  "  --json | jq -r . > in-stock-products.jsonl",
+].join("\n");
+const inspectExport = [
+  "wc -l products.jsonl",
+  "head -n 3 products.jsonl | jq .",
+].join("\n");
+const filterFailures = [
+  "tsk documents.import --input import-input.json --yes --json \\",
+  "  | jq -r . > import-results.jsonl",
+  "",
+  "jq -c 'select(.success == false)' import-results.jsonl",
+].join("\n");
+const compareSchema = [
+  "tsk collections.retrieve \\",
+  "  --input '{\"collection\":\"products\"}' --json > products-schema.json",
+  "",
+  "jq . products-schema.json",
+  "jq . products.json",
+].join("\n");
+const clusterChecks = [
+  "tsk profile test production",
+  "tsk health --input '{}' --json",
+  "tsk collections.retrieve --input '{\"collection\":\"products\"}' --json",
+  "tsk documents.search --input '{\"collection\":\"products\",\"params\":{\"q\":\"*\",\"query_by\":\"title\",\"per_page\":1}}' --json",
+].join("\n");
+const automation = [
+  "TYPESENSE_URL=https://your-cluster.typesense.net \\",
+  'TYPESENSE_API_KEY="$TYPESENSE_API_KEY" \\',
+  "tsk documents.import --input import-input.json --yes --json \\",
+  "  | jq -r . > import-results.jsonl",
+  "",
+  "test \"$(jq -c 'select(.success == false)' import-results.jsonl | wc -l | tr -d ' ')\" = \"0\"",
+].join("\n");
+
+const toc = [
+  { href: "#inspect", label: "Inspect inputs" },
+  { href: "#import", label: "Import documents" },
+  { href: "#export", label: "Export documents" },
+  { href: "#failures", label: "Debug failures" },
+  { href: "#cluster", label: "Check the cluster" },
+  { href: "#automation", label: "Automate safely" },
+];
+---
+
+<GuideLayout
+  title="Import, export, and debug Typesense from the CLI"
+  description="Use the TypesenseKit CLI to validate document imports, export filtered JSONL, inspect schemas, and debug Typesense data workflows with structured output."
+  eyebrow="Typesense CLI workflows"
+  {toc}
+  previous={{ href: "/guides/cli/", label: "Set up the Typesense CLI" }}
+  next={{ href: "/typesense-cli/", label: "Explore all CLI operations" }}
+>
+  <h2 id="inspect">Inspect the operation before sending data</h2>
+  <p>TypesenseKit validates structured input before making a network request. Inspect the generated schema and examples for the current CLI version before building an import or export job.</p>
+  <CopyCode code={inspectCommands} />
+  <p>All operation input is one JSON object supplied inline or through a JSON file. Operation names and schemas come from the same 95-operation registry used by the MCP server.</p>
+
+  <h2 id="import">Import or upsert documents</h2>
+  <p>Create an input file containing the collection, optional import action, and either an array of documents or a JSONL string.</p>
+  <CopyCode code={importInput} language="json" label="import-input.json" />
+  <p>Run the import. Because imports can replace existing data depending on the action, the CLI asks for confirmation.</p>
+  <CopyCode code="tsk documents.import --input import-input.json --json" />
+  <p>Use <code>--yes</code> only in controlled automation after checking the collection and action.</p>
+  <CopyCode code="tsk documents.import --input import-input.json --yes --json" />
+  <p>To wrap an existing JSON array in the required operation object:</p>
+  <CopyCode code={'jq \'{collection:"products", action:"upsert", documents:.}\' products.json > import-input.json'} />
+
+  <h2 id="export">Export all or filtered documents</h2>
+  <p>Typesense returns exports as JSONL. TypesenseKit represents that response as a JSON string in structured output, so use <code>jq -r</code> to write the original lines to disk.</p>
+  <CopyCode code={exportAll} />
+  <p>Pass supported Typesense export parameters through <code>params</code> to filter records or limit fields.</p>
+  <CopyCode code={exportFiltered} />
+  <p>Check the file before using it as a backup or migration input.</p>
+  <CopyCode code={inspectExport} />
+
+  <h2 id="failures">Debug import failures</h2>
+  <p>Typesense import responses contain one JSON result per submitted document. Preserve the raw output, then filter unsuccessful rows.</p>
+  <CopyCode code={filterFailures} />
+  <p>Common causes include missing required fields, incompatible field types, invalid nested data, and using <code>create</code> when a document ID already exists.</p>
+  <p>Retrieve the live collection schema and compare it with a failing document:</p>
+  <CopyCode code={compareSchema} />
+
+  <h2 id="cluster">Separate data problems from cluster problems</h2>
+  <p>Check connectivity and cluster health before debugging an import payload. Then run a small search to verify the target collection is queryable.</p>
+  <CopyCode code={clusterChecks} />
+  <div class="callout"><strong>Debug in layers.</strong> Verify the profile, cluster health, collection schema, one sample document, and only then retry a full import.</div>
+
+  <h2 id="automation">Automate without leaking credentials</h2>
+  <p>Use environment variables or pipe a key over stdin. Keep keys out of command arguments and shell history, request stable JSON, and fail the job when unsuccessful import rows are present.</p>
+  <CopyCode code={automation} />
+  <p>Use a key restricted to the target collection and required document actions. Review the <a href="/guides/cli/">complete CLI guide</a> for profiles, Keychain storage, environment-only use, and shell completion.</p>
+</GuideLayout>

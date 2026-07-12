@@ -47,6 +47,7 @@ const toc = [
   <p>Add the stdio server with Claude Code's MCP command, then make the Typesense variables available in your shell or MCP environment.</p>
   <CopyCode code={"export TYPESENSE_URL=https://your-cluster.typesense.net\nexport TYPESENSE_API_KEY=your-scoped-api-key\nclaude mcp add typesensekit -- npx -y @typesensekit/mcp"} />
   <p>TypesenseKit can print this command for you with <code>tsk skills claude-code</code>. Run <code>claude mcp list</code> to confirm the server is registered.</p>
+  <p>For scopes, inline environment configuration, verification prompts, and troubleshooting, follow the <a href="/guides/typesense-mcp-claude-code/">complete Claude Code and Typesense MCP guide</a>.</p>
 
   <h2 id="codex">Codex</h2>
   <p>Codex CLI, the IDE extension, and the ChatGPT desktop app share MCP configuration. Add this to <code>~/.codex/config.toml</code>, or use <code>.codex/config.toml</code> inside a trusted project.</p>

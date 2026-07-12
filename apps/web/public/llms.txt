@@ -2,6 +2,8 @@
 
 > TypesenseKit is an independent, open-source Typesense CLI and MCP server for operating Typesense from a terminal, script, or AI agent.
 
+TypesenseKit exposes 95 typed Typesense operations through one shared CLI and MCP registry. MCP access is read-only by default; write, delete, key-management, and raw API tools require explicit opt-in.
+
 ## Product pages
 
 - Typesense CLI: https://typesensekit.vercel.app/typesense-cli/
@@ -9,6 +11,9 @@
 - CLI guide: https://typesensekit.vercel.app/guides/cli/
 - MCP guide: https://typesensekit.vercel.app/guides/mcp/
 - AI client setup: https://typesensekit.vercel.app/guides/clients/
+- Claude Code setup: https://typesensekit.vercel.app/guides/typesense-mcp-claude-code/
+- Read-only agent access: https://typesensekit.vercel.app/guides/typesense-mcp-read-only-agent-access/
+- CLI import, export, and debugging: https://typesensekit.vercel.app/guides/typesense-cli-import-export-debugging/
 
 ## Packages and source
 

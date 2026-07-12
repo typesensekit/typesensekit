@@ -1,0 +1,98 @@
+---
+import CopyCode from "../../components/CopyCode.astro";
+import GuideLayout from "../../layouts/GuideLayout.astro";
+
+const toc = [
+  { href: "#requirements", label: "Requirements" },
+  { href: "#add", label: "Add to Claude Code" },
+  { href: "#scope", label: "Choose a scope" },
+  { href: "#verify", label: "Verify the connection" },
+  { href: "#prompts", label: "Example prompts" },
+  { href: "#troubleshoot", label: "Troubleshooting" },
+];
+
+const addLocal = [
+  "claude mcp add --transport stdio \\",
+  "  --env TYPESENSE_URL=https://your-cluster.typesense.net \\",
+  "  --env TYPESENSE_API_KEY=your-scoped-api-key \\",
+  "  typesensekit -- npx -y @typesensekit/mcp",
+].join("\n");
+const addUser = [
+  "claude mcp add --transport stdio --scope user \\",
+  "  --env TYPESENSE_URL=https://your-cluster.typesense.net \\",
+  "  --env TYPESENSE_API_KEY=your-scoped-api-key \\",
+  "  typesensekit -- npx -y @typesensekit/mcp",
+].join("\n");
+const verifyCommands = [
+  "claude mcp list",
+  "claude mcp get typesensekit",
+  "",
+  "# Inside Claude Code",
+  "/mcp",
+].join("\n");
+const examplePrompts = [
+  "List my Typesense collections and summarize their document counts.",
+  "",
+  "Inspect the products collection schema. Explain which fields are searchable, facetable, and sortable.",
+  "",
+  'Search products for "oak chair" and summarize the strongest matches. Do not modify the cluster.',
+  "",
+  "Check cluster health and highlight anything that needs investigation.",
+].join("\n");
+const directRun = [
+  "TYPESENSE_URL=https://your-cluster.typesense.net \\",
+  "TYPESENSE_API_KEY=your-scoped-api-key \\",
+  "npx -y @typesensekit/mcp",
+].join("\n");
+---
+
+<GuideLayout
+  title="Connect Claude Code to Typesense with MCP"
+  description="Add TypesenseKit to Claude Code, connect a scoped Typesense API key, verify the MCP server, and inspect your cluster with read-only tools."
+  eyebrow="Claude Code + Typesense"
+  {toc}
+  previous={{ href: "/guides/clients/", label: "Compare AI client setups" }}
+  next={{ href: "/guides/typesense-mcp-read-only-agent-access/", label: "Design read-only agent access" }}
+>
+  <h2 id="requirements">What you need</h2>
+  <p>TypesenseKit gives Claude Code access to the same 95 typed Typesense operations available in the CLI. The MCP server is read-only by default, so Claude starts with search, document reads, schemas, collection metadata, configuration reads, and system status tools.</p>
+  <ul>
+    <li>Node.js 22.11 or newer.</li>
+    <li>Claude Code installed and signed in.</li>
+    <li>A reachable Typesense cluster URL.</li>
+    <li>A narrowly scoped Typesense API key.</li>
+  </ul>
+  <div class="callout"><strong>Keep the safe default.</strong> Do not set <code>TYPESENSEKIT_READ_ONLY=false</code> for search, inspection, support, or relevance-debugging workflows.</div>
+
+  <h2 id="add">Add TypesenseKit to Claude Code</h2>
+  <p>Run the following command from the project where you want Claude Code to use Typesense. Claude Code stores a local-scoped server by default.</p>
+  <CopyCode code={addLocal} />
+  <p>All Claude Code options come before the server name. The double dash separates Claude Code's configuration from the command used to launch TypesenseKit.</p>
+  <p>If you already use the TypesenseKit CLI, it can print the base command:</p>
+  <CopyCode code="tsk skills claude-code" />
+
+  <h2 id="scope">Choose where the configuration lives</h2>
+  <p>The default local scope is private to you and only loads in the current project. Use it for production credentials and experiments.</p>
+  <p>Use <code>--scope user</code> when the same server should be available across your projects. Use <code>--scope project</code> only when the shared <code>.mcp.json</code> configuration contains environment-variable references rather than committed secrets.</p>
+  <CopyCode code={addUser} label="User scope" />
+  <div class="callout"><strong>Never commit an admin key.</strong> Project-scoped MCP configuration is designed for version control, so keep credentials in each developer's environment or secret manager.</div>
+
+  <h2 id="verify">Verify the MCP connection</h2>
+  <p>List the configured servers, inspect TypesenseKit, then open Claude Code's MCP panel.</p>
+  <CopyCode code={verifyCommands} />
+  <p>The server should connect successfully and expose read-only tools. Ask Claude to list collections, then confirm that write, delete, key-management, and raw API tools are absent.</p>
+
+  <h2 id="prompts">Try read-only Typesense prompts</h2>
+  <CopyCode code={examplePrompts} label="Claude Code prompts" />
+  <p>Tool names match the CLI operation registry, including <code>collections.list</code>, <code>collections.retrieve</code>, <code>documents.search</code>, and <code>health</code>.</p>
+
+  <h2 id="troubleshoot">Troubleshoot startup and permissions</h2>
+  <h3>Server does not connect</h3>
+  <p>Run the package directly with the same environment. If this fails, fix the Node, npm, URL, or credential issue before retrying Claude Code.</p>
+  <CopyCode code={directRun} />
+  <h3>Claude can connect but a request is denied</h3>
+  <p>The Typesense API key still controls what the server may read. Expand the key only for the required collection and action; do not replace it with a broad admin key by default.</p>
+  <h3>Write tools are missing</h3>
+  <p>That is expected in the default mode. Read the <a href="/guides/typesense-mcp-read-only-agent-access/">read-only agent access guide</a> before enabling mutations.</p>
+  <p>For current Claude Code MCP command syntax and scope behavior, see the <a href="https://code.claude.com/docs/en/mcp">official Claude Code MCP documentation</a>.</p>
+</GuideLayout>
