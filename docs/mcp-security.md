@@ -81,6 +81,7 @@ TYPESENSEKIT_MCP_TOOL_TIMEOUT_MS=30000
 TYPESENSEKIT_MCP_MAX_CONCURRENCY=8
 TYPESENSEKIT_MCP_RATE_LIMIT_PER_MINUTE=120
 TYPESENSEKIT_MCP_MAX_RESPONSE_BYTES=1048576
+TYPESENSEKIT_MCP_AUDIT_LOG=true
 ```
 
 ## Production Guidance
@@ -98,6 +99,9 @@ TYPESENSEKIT_MCP_MAX_RESPONSE_BYTES=1048576
 - Capture process stdout/stderr from the supervisor. Tool results are returned to
   the MCP client, and TypesenseKit redacts API keys, auth headers, cookies, and
   generated key values from tool output and errors.
+- Set `TYPESENSEKIT_MCP_AUDIT_LOG=true` for metadata-only JSON audit events on
+  stderr. Events contain the operation, outcome, duration, timestamp, and safe
+  error class; they never contain arguments, results, credentials, or raw errors.
 - Treat `documents.export` as sensitive. It is read-only, but it can return a
   large amount of data if the API key and collection scope allow it.
 - Tool listings include MCP read-only, destructive, idempotent, and open-world

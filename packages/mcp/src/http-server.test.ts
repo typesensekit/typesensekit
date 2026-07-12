@@ -72,6 +72,41 @@ describe("MCP HTTP configuration", () => {
 });
 
 describe("MCP HTTP trust boundary", () => {
+  it("initializes MCP through the real secured HTTP transport", async () => {
+    vi.stubEnv("TYPESENSE_URL", "http://127.0.0.1:8108");
+    vi.stubEnv("TYPESENSE_API_KEY", "test-key");
+    server = createMcpHttpServer(config());
+    await new Promise<void>((resolve) =>
+      server?.listen(0, "127.0.0.1", resolve),
+    );
+    const address = server.address();
+    if (!address || typeof address === "string")
+      throw new Error("Missing port");
+
+    const response = await fetch(`http://127.0.0.1:${address.port}/mcp`, {
+      method: "POST",
+      headers: {
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer test-token",
+        "content-type": "application/json",
+        origin: "https://trusted.example",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-06-18",
+          capabilities: {},
+          clientInfo: { name: "http-test", version: "1" },
+        },
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('"name":"typesensekit"');
+  });
+
   it("keeps the health endpoint unauthenticated", async () => {
     const { baseUrl } = await start(config());
     const response = await fetch(`${baseUrl}/healthz`);

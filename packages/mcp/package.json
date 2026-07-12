@@ -22,7 +22,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke:stdio": "node scripts/smoke-stdio.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

@@ -6,6 +6,7 @@ import {
   formatTypesenseErrorMessage,
   type Operation,
   operations,
+  redactSecrets,
   type TypesenseClient,
 } from "@typesensekit/core";
 import type { z } from "zod";
@@ -16,13 +17,13 @@ type ResourceOperationInput = {
   id?: string;
 };
 
-function jsonContents(uri: string, value: unknown) {
+export function jsonContents(uri: string, value: unknown) {
   return {
     contents: [
       {
         uri,
         mimeType: "application/json",
-        text: JSON.stringify(value, null, 2),
+        text: JSON.stringify(redactSecrets(value), null, 2),
       },
     ],
   };

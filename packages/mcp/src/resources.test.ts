@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { operationManifest } from "./resources.js";
+import { jsonContents, operationManifest } from "./resources.js";
 
 describe("MCP resources", () => {
+  it("redacts secrets from resource content", () => {
+    expect(
+      jsonContents("typesense://example", {
+        id: "document-1",
+        api_key: "secret-value",
+      }),
+    ).toMatchObject({
+      contents: [
+        {
+          text: '{\n  "id": "document-1",\n  "api_key": "[REDACTED]"\n}',
+        },
+      ],
+    });
+  });
+
   it("summarizes active operations for the operation manifest resource", () => {
     expect(
       operationManifest(
