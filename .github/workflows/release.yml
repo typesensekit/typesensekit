@@ -6,15 +6,14 @@ on:
 permissions:
   contents: write
   id-token: write
-  pull-requests: write
-
-concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10.22.0
@@ -26,10 +25,40 @@ jobs:
       - run: npm install -g npm@latest
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
-      - name: Create release pull request or publish packages
-        uses: changesets/action@v1.9.0
-        with:
-          publish: pnpm release:ci
-          createGithubReleases: true
+      - run: node scripts/skip-published-packages.mjs
+      - run: pnpm changeset publish
+      - name: Create GitHub releases
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          while IFS= read -r tag; do
+            case "$tag" in
+              "@typesensekit/cli@"*) changelog="packages/cli/CHANGELOG.md" ;;
+              "@typesensekit/mcp@"*) changelog="packages/mcp/CHANGELOG.md" ;;
+              *) continue ;;
+            esac
+
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              continue
+            fi
+
+            version="${tag##*@}"
+            notes="$(awk -v heading="## $version" '
+              $0 == heading { capture = 1; next }
+              capture && /^## / { exit }
+              capture { print }
+            ' "$changelog")"
+
+            if [[ -z "$notes" ]]; then
+              echo "No changelog entry found for $tag" >&2
+              exit 1
+            fi
+
+            git push origin "refs/tags/$tag"
+            gh release create "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "$tag" \
+              --notes "$notes"
+          done < <(git tag --points-at HEAD)
