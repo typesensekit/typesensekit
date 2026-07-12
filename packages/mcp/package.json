@@ -1,10 +1,12 @@
 {
   "name": "@typesensekit/mcp",
-  "version": "1.3.0",
+  "version": "1.4.2",
+  "mcpName": "io.github.akshitkrnagpal/typesensekit",
   "type": "module",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
   "bin": {
+    "mcp": "dist/cli.js",
     "typesensekit-mcp": "dist/cli.js",
     "typesensekit-mcp-http": "dist/http.js"
   },
@@ -16,7 +18,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "server.json"
   ],
   "scripts": {
     "build": "tsup",
