@@ -50,11 +50,11 @@ const toc = [
   <h2 id="http">Run Streamable HTTP or Docker</h2>
   <p>For a stateless HTTP transport, use the package's dedicated binary.</p>
   <CopyCode code={"TYPESENSE_URL=http://localhost:8108 \\\nTYPESENSE_API_KEY=xyz \\\npnpm dlx --package @typesensekit/mcp typesensekit-mcp-http"} />
-  <p>The repository also includes a production-oriented Dockerfile and deployment guidance. Follow the <a href="https://github.com/akshitkrnagpal/typesensekit/blob/main/docs/mcp-http-docker.md">HTTP and Docker guide</a> for health checks, origins, host/port configuration, and container examples.</p>
+  <p>The repository also includes a production-oriented Dockerfile and deployment guidance. Follow the <a href="https://github.com/typesensekit/typesensekit/blob/main/docs/mcp-http-docker.md">HTTP and Docker guide</a> for health checks, origins, host/port configuration, and container examples.</p>
 
   <h2 id="registry">Find TypesenseKit in the MCP Registry</h2>
-  <p>The package includes verified registry metadata under <code>io.github.akshitkrnagpal/typesensekit</code>. The registry entry points clients to the public npm package and its required environment variables.</p>
-  <CopyCode code={'curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.akshitkrnagpal/typesensekit"'} />
+  <p>The package includes verified registry metadata under <code>io.github.typesensekit/typesensekit</code>. The registry entry points clients to the public npm package and its required environment variables.</p>
+  <CopyCode code={'curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.typesensekit/typesensekit"'} />
 
   <h2 id="production">Production safety checklist</h2>
   <ul>
@@ -65,5 +65,5 @@ const toc = [
     <li>Keep <code>api.call</code> unavailable unless the workflow genuinely needs unwrapped endpoints.</li>
     <li>Set explicit connection timeouts and monitor tool calls in the MCP host.</li>
   </ul>
-  <p>Read the full <a href="https://github.com/akshitkrnagpal/typesensekit/blob/main/docs/mcp-security.md">MCP security and operations guide</a> before enabling production access.</p>
+  <p>Read the full <a href="https://github.com/typesensekit/typesensekit/blob/main/docs/mcp-security.md">MCP security and operations guide</a> before enabling production access.</p>
 </GuideLayout>

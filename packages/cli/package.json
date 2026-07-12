@@ -43,11 +43,11 @@
   "author": "Akshit Kr Nagpal",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/akshitkrnagpal/typesensekit.git",
+    "url": "git+https://github.com/typesensekit/typesensekit.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/akshitkrnagpal/typesensekit/issues"
+    "url": "https://github.com/typesensekit/typesensekit/issues"
   },
   "homepage": "https://typesensekit.vercel.app/typesense-cli/",
   "keywords": [

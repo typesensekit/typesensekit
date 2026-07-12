@@ -1,10 +1,10 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.akshitkrnagpal/typesensekit",
+  "name": "io.github.typesensekit/typesensekit",
   "title": "TypesenseKit",
   "description": "95 typed Typesense operations for AI agents through an MCP server that is read-only by default.",
   "repository": {
-    "url": "https://github.com/akshitkrnagpal/typesensekit",
+    "url": "https://github.com/typesensekit/typesensekit",
     "source": "github",
     "subfolder": "packages/mcp"
   },

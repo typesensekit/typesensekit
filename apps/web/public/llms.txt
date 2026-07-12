@@ -17,10 +17,10 @@ TypesenseKit exposes 95 typed Typesense operations through one shared CLI and MC
 
 ## Packages and source
 
-- GitHub: https://github.com/akshitkrnagpal/typesensekit
+- GitHub: https://github.com/typesensekit/typesensekit
 - CLI package: https://www.npmjs.com/package/@typesensekit/cli
 - MCP package: https://www.npmjs.com/package/@typesensekit/mcp
-- API coverage: https://github.com/akshitkrnagpal/typesensekit/blob/main/docs/api-coverage.md
+- API coverage: https://github.com/typesensekit/typesensekit/blob/main/docs/api-coverage.md
 
 ## Security
 

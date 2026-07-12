@@ -34,10 +34,10 @@
   "author": "Akshit Kr Nagpal",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/akshitkrnagpal/typesensekit.git"
+    "url": "git+https://github.com/typesensekit/typesensekit.git"
   },
   "bugs": {
-    "url": "https://github.com/akshitkrnagpal/typesensekit/issues"
+    "url": "https://github.com/typesensekit/typesensekit/issues"
   },
-  "homepage": "https://github.com/akshitkrnagpal/typesensekit#readme"
+  "homepage": "https://github.com/typesensekit/typesensekit#readme"
 }

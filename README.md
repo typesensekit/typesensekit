@@ -2,7 +2,7 @@
 
 ![TypesenseKit GitHub hero banner](./assets/github-hero.png)
 
-[![CI](https://github.com/akshitkrnagpal/typesensekit/actions/workflows/ci.yml/badge.svg)](https://github.com/akshitkrnagpal/typesensekit/actions/workflows/ci.yml)
+[![CI](https://github.com/typesensekit/typesensekit/actions/workflows/ci.yml/badge.svg)](https://github.com/typesensekit/typesensekit/actions/workflows/ci.yml)
 [![CLI on npm](https://img.shields.io/npm/v/@typesensekit/cli?label=CLI)](https://www.npmjs.com/package/@typesensekit/cli)
 [![MCP on npm](https://img.shields.io/npm/v/@typesensekit/mcp?label=MCP)](https://www.npmjs.com/package/@typesensekit/mcp)
 [![MIT License](https://img.shields.io/badge/license-MIT-18d2d0)](./LICENSE)

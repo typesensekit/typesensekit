@@ -1,7 +1,7 @@
 {
   "name": "@typesensekit/mcp",
   "version": "1.4.3",
-  "mcpName": "io.github.akshitkrnagpal/typesensekit",
+  "mcpName": "io.github.typesensekit/typesensekit",
   "type": "module",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
@@ -46,11 +46,11 @@
   "author": "Akshit Kr Nagpal",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/akshitkrnagpal/typesensekit.git",
+    "url": "git+https://github.com/typesensekit/typesensekit.git",
     "directory": "packages/mcp"
   },
   "bugs": {
-    "url": "https://github.com/akshitkrnagpal/typesensekit/issues"
+    "url": "https://github.com/typesensekit/typesensekit/issues"
   },
   "homepage": "https://typesensekit.vercel.app/typesense-mcp/",
   "keywords": [
