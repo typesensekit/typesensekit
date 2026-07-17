@@ -783,6 +783,15 @@ pre {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.footer-credit {
+  text-transform: none;
+}
+.footer-credit a {
+  color: var(--muted);
+}
+.footer-credit a:hover {
+  color: var(--teal);
+}
 
 .code-block {
   margin: 1.3rem 0 2rem;
