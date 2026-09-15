@@ -1,5 +1,18 @@
 # @typesensekit/cli
 
+## 1.5.0
+
+### Minor Changes
+
+- 8567435: Update dependencies to patched versions. Emit complete CLI JSON Schemas and validate examples for every operation. Add explicit CLI-only `keys.create --reveal` output and isolate new Keychain credentials by unique references.
+
+  Apply the shared execution limits to MCP resource reads and return failures as protocol errors. Limit document batches to 100 IDs and eight concurrent requests per batch, preserving input order and draining active requests on failure. Record successful tool audits only after response serialization succeeds.
+
+### Patch Changes
+
+- 8567435: Preserve MCP field definition inputs, retain concurrency slots for timed-out work until it settles, require confirmation for schema updates that drop fields, and prevent malformed HTTP Host headers from crashing the server. Prevent failed Keychain saves from printing API keys. Clarify credential setup and MCP execution limits.
+- 8567435: Send document and stemming-dictionary imports with the correct text/plain content type so JSONL batches reach Typesense without JSON string encoding. Explicitly request text for document import/export responses. Add SDK transport regressions and a reusable live CLI/MCP integration test.
+
 ## 1.4.4
 
 ### Patch Changes
