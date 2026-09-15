@@ -1,4 +1,5 @@
 import { operations } from "@typesensekit/core";
+import Ajv from "ajv";
 import { describe, expect, it } from "vitest";
 import {
   renderInputSchema,
@@ -15,7 +16,7 @@ describe("operation docs", () => {
   it("renders the top-level input shape for documents.search", () => {
     expect(
       JSON.parse(renderInputSchema(operationInput("documents.search"))),
-    ).toEqual({
+    ).toMatchObject({
       type: "object",
       properties: {
         collection: { type: "string" },
@@ -72,4 +73,43 @@ describe("operation docs", () => {
       expect(rendered).not.toContain("No curated examples");
     }
   });
+});
+
+it("emits valid JSON Schemas and inputs for every operation", () => {
+  const ajv = new Ajv({ strict: false, validateFormats: false });
+  for (const operation of operations) {
+    const schema = JSON.parse(renderInputSchema(operation.input));
+    expect(ajv.validateSchema(schema), operation.name).toBe(true);
+    const validate = ajv.compile(schema);
+    for (const line of renderOperationExamples(
+      operation.name,
+      operation.input,
+    ).split("\n")) {
+      const payload = JSON.parse(
+        line.slice(line.indexOf("--input '") + 9, line.lastIndexOf("' --json")),
+      );
+      expect(operation.input.safeParse(payload).success, operation.name).toBe(
+        true,
+      );
+      expect(
+        validate(payload),
+        operation.name + JSON.stringify(validate.errors),
+      ).toBe(true);
+    }
+  }
+});
+
+it("includes validation limits and passthrough properties", () => {
+  const schema = JSON.parse(
+    renderInputSchema(operationInput("analytics.events.list")),
+  );
+  expect(schema.properties.limit).toMatchObject({
+    type: "integer",
+    maximum: 1000,
+  });
+  expect(schema.properties.userId).toMatchObject({ minLength: 1 });
+  expect(
+    JSON.parse(renderInputSchema(operationInput("collections.fields.add")))
+      .additionalProperties,
+  ).toBe(true);
 });

@@ -27,13 +27,15 @@
   "dependencies": {
     "citty": "^0.2.2",
     "env-paths": "^4.0.0",
+    "typesense": "^3.0.6",
     "zod": "^3.25.76",
-    "typesense": "^3.0.6"
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "tsup": "^8.5.1",
-    "@typesensekit/core": "workspace:*"
+    "@types/node": "^22.20.2",
+    "@typesensekit/core": "workspace:*",
+    "ajv": "^8.20.0",
+    "tsup": "^8.5.1"
   },
   "publishConfig": {
     "access": "public"

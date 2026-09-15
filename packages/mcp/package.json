@@ -26,17 +26,18 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "smoke:stdio": "node scripts/smoke-stdio.mjs"
+    "smoke:stdio": "node scripts/smoke-stdio.mjs",
+    "test:live": "node scripts/test-live.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^3.25.76",
-    "typesense": "^3.0.6"
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "typesense": "^3.0.6",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "tsup": "^8.5.1",
-    "@types/node": "^22.10.0",
-    "@typesensekit/core": "workspace:*"
+    "@types/node": "^22.20.2",
+    "@typesensekit/core": "workspace:*",
+    "tsup": "^8.5.1"
   },
   "publishConfig": {
     "access": "public"

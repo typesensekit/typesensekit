@@ -15,3 +15,17 @@ describe("operation safety", () => {
     expect(isDestructiveOperation("api.call")).toBe(true);
   });
 });
+
+it("confirms schema updates that drop fields", () => {
+  expect(
+    isDestructiveOperation("collections.update", {
+      fields: [{ name: "title", drop: true }],
+    }),
+  ).toBe(true);
+  expect(
+    isDestructiveOperation("collections.update", {
+      fields: [{ name: "title", type: "string" }],
+    }),
+  ).toBe(false);
+  expect(isDestructiveOperation("collections.update")).toBe(true);
+});

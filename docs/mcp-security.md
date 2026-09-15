@@ -93,9 +93,13 @@ TYPESENSEKIT_MCP_AUDIT_LOG=true
   impacting application traffic.
 - Set a short Typesense connection timeout for assistant workflows. Long
   timeouts make tool calls harder to cancel and retry.
-- Apply rate limits at the MCP client, process supervisor, reverse proxy, or
-  container platform boundary. TypesenseKit does not currently enforce per-tool
-  rate limits inside the stdio server.
+- Tool calls and resource reads share process-wide concurrency and rolling-minute rate limits in
+  both stdio and HTTP modes. These are not per-user or per-tool quotas. Resource reads also enforce
+  the configured timeout and response-size limit. Apply additional limits at
+  the reverse proxy or platform boundary when exposing HTTP.
+- A tool timeout stops waiting for a response; it does not cancel work already
+  sent to Typesense. The work retains its concurrency slot until it settles.
+  Check the resulting state before retrying a timed-out write.
 - Capture process stdout/stderr from the supervisor. Tool results are returned to
   the MCP client, and TypesenseKit redacts API keys, auth headers, cookies, and
   generated key values from tool output and errors.
@@ -123,3 +127,10 @@ added. Keep `api.call` disabled for assistant-facing read-only deployments.
 
 - Typesense API keys: https://typesense.org/docs/30.2/api/api-keys.html
 - Typesense data access control: https://typesense.org/docs/guide/data-access-control.html
+
+## Batch reads
+
+`documents.get_many` accepts 1–100 IDs and runs at most eight downstream
+requests at once per batch. Results retain input order. On failure, it stops
+starting requests and waits for in-flight requests to settle before returning
+an error. Multiple admitted MCP calls may each have an active batch.

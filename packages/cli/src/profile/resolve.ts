@@ -35,7 +35,7 @@ async function resolveStoredProfile(
   const profileName = options.profile ?? config.currentProfile;
   if (!profileName) {
     throw new Error(
-      "No Typesense profile configured. Run `tsk profile add <name> --url <url> --api-key <key>` or set TYPESENSE_URL and TYPESENSE_API_KEY.",
+      "No Typesense profile configured. Run `tsk profile add <name> --url <url>` for a secure API key prompt, or set TYPESENSE_URL and TYPESENSE_API_KEY.",
     );
   }
 

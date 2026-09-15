@@ -50,6 +50,9 @@ const clusterChecks = [
   "tsk documents.search --input '{\"collection\":\"products\",\"params\":{\"q\":\"*\",\"query_by\":\"title\",\"per_page\":1}}' --json",
 ].join("\n");
 const automation = [
+  "#!/usr/bin/env bash",
+  "set -euo pipefail",
+  "",
   "TYPESENSE_URL=https://your-cluster.typesense.net \\",
   'TYPESENSE_API_KEY="$TYPESENSE_API_KEY" \\',
   "tsk documents.import --input import-input.json --yes --json \\",

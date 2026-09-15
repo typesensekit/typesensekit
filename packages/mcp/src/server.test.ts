@@ -133,3 +133,47 @@ describe("MCP server", () => {
     }
   });
 });
+
+it("preserves passthrough field definitions through MCP validation", async () => {
+  const requests: unknown[] = [];
+  const typesense = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    requests.push(JSON.parse(body));
+    response.writeHead(200, { "content-type": "application/json" }).end("{}");
+  });
+  await new Promise<void>((resolve) =>
+    typesense.listen(0, "127.0.0.1", resolve),
+  );
+  const address = typesense.address();
+  if (!address || typeof address === "string") throw new Error("Missing port");
+  vi.stubEnv("TYPESENSE_URL", `http://127.0.0.1:${address.port}`);
+  const { createTypesenseMcpServer } = await import("./server.js");
+  const server = createTypesenseMcpServer({ readOnly: false });
+  const client = new Client({ name: "test", version: "1" });
+  const [clientTransport, serverTransport] =
+    InMemoryTransport.createLinkedPair();
+  try {
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+    const result = await client.callTool({
+      name: "collections.fields.add",
+      arguments: {
+        collection: "products",
+        field: "title",
+        type: "string",
+        facet: true,
+      },
+    });
+    expect(result.isError).not.toBe(true);
+    expect(requests).toEqual([
+      { fields: [{ name: "title", type: "string", facet: true }] },
+    ]);
+  } finally {
+    await client.close();
+    await server.close();
+    await new Promise<void>((resolve) => typesense.close(() => resolve()));
+  }
+});

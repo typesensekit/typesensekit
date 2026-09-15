@@ -1,4 +1,5 @@
-import { z } from "zod";
+import type { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 type JsonValue =
   | string
@@ -9,7 +10,11 @@ type JsonValue =
   | { [key: string]: JsonValue };
 
 type JsonSchema = {
-  type?: string;
+  type?: string | string[];
+  minimum?: number;
+  exclusiveMinimum?: number;
+  minItems?: number;
+  default?: JsonValue;
   enum?: string[];
   anyOf?: JsonSchema[];
   items?: JsonSchema;
@@ -65,6 +70,10 @@ const EXAMPLES: Record<string, JsonValue[]> = {
       embedModel: "openai/text-embedding-3-small",
     },
   ],
+  "collections.fields.drop": [{ collection: "products", field: "old_title" }],
+  "collections.fields.replace": [
+    { collection: "products", field: "title", type: "string", optional: true },
+  ],
   "collections.wait": [
     {
       collection: "products",
@@ -109,9 +118,11 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   ],
   "keys.create": [
     {
-      description: "Search-only key",
-      actions: ["documents:search"],
-      collections: ["products"],
+      value: {
+        description: "Search-only key",
+        actions: ["documents:search"],
+        collections: ["products"],
+      },
     },
   ],
   "nl_search_models.create": [
@@ -192,75 +203,11 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   ],
 };
 
-function unwrapSchema(input: z.ZodTypeAny): {
-  schema: z.ZodTypeAny;
-  optional: boolean;
-} {
-  if (input instanceof z.ZodOptional) {
-    const inner = unwrapSchema(input.unwrap());
-    return { schema: inner.schema, optional: true };
-  }
-  if (input instanceof z.ZodDefault) {
-    const inner = unwrapSchema(input.removeDefault());
-    return { schema: inner.schema, optional: true };
-  }
-  if (input instanceof z.ZodNullable) {
-    return unwrapSchema(input.unwrap());
-  }
-  return { schema: input, optional: false };
-}
-
-function describeSchema(input: z.ZodTypeAny): JsonSchema {
-  const { schema } = unwrapSchema(input);
-
-  if (schema instanceof z.ZodString) return { type: "string" };
-  if (schema instanceof z.ZodNumber) return { type: "number" };
-  if (schema instanceof z.ZodBoolean) return { type: "boolean" };
-  if (schema instanceof z.ZodEnum)
-    return { type: "string", enum: schema.options };
-  if (schema instanceof z.ZodArray) {
-    return { type: "array", items: describeSchema(schema.element) };
-  }
-  if (schema instanceof z.ZodRecord) {
-    const valueType = (schema as z.ZodRecord<z.ZodTypeAny, z.ZodTypeAny>)
-      .valueSchema;
-    return {
-      type: "object",
-      additionalProperties: valueType ? describeSchema(valueType) : true,
-    };
-  }
-  if (schema instanceof z.ZodUnion) {
-    const options = schema.options as z.ZodTypeAny[];
-    return {
-      anyOf: options.map((option) => describeSchema(option)),
-    };
-  }
-  if (schema instanceof z.ZodObject) {
-    return inputObjectSchema(schema);
-  }
-
-  return { type: "unknown" };
-}
-
 export function inputObjectSchema(input: z.ZodTypeAny): JsonSchema {
-  const { schema } = unwrapSchema(input);
-  if (!(schema instanceof z.ZodObject)) return describeSchema(schema);
-
-  const properties: Record<string, JsonSchema> = {};
-  const required: string[] = [];
-
-  const shape = schema.shape as z.ZodRawShape;
-  for (const [name, child] of Object.entries(shape)) {
-    const { optional } = unwrapSchema(child);
-    properties[name] = describeSchema(child);
-    if (!optional) required.push(name);
-  }
-
-  return {
-    type: "object",
-    properties,
-    required,
-  };
+  return zodToJsonSchema(input, {
+    $refStrategy: "none",
+    target: "jsonSchema7",
+  }) as JsonSchema;
 }
 
 export function renderInputSchema(input: z.ZodTypeAny): string {
@@ -283,6 +230,9 @@ export function renderOperationExamples(
 }
 
 function exampleFromSchema(schema: JsonSchema, propertyName = ""): JsonValue {
+  if (schema.default !== undefined) return schema.default;
+  if (Array.isArray(schema.type))
+    return exampleFromSchema({ ...schema, type: schema.type[0] }, propertyName);
   if (schema.enum?.[0]) return schema.enum[0];
   if (schema.anyOf?.[0])
     return exampleFromSchema(schema.anyOf[0], propertyName);
@@ -295,7 +245,8 @@ function exampleFromSchema(schema: JsonSchema, propertyName = ""): JsonValue {
     if (/key|secret|token/i.test(propertyName)) return "[REDACTED]";
     return "value";
   }
-  if (schema.type === "number") return 1;
+  if (schema.type === "number" || schema.type === "integer")
+    return Math.max(1, schema.minimum ?? 1, (schema.exclusiveMinimum ?? 0) + 1);
   if (schema.type === "boolean") return true;
   if (schema.type === "array") {
     return [exampleFromSchema(schema.items ?? {}, propertyName)];

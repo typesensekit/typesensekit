@@ -31,6 +31,7 @@ const fieldLifecycleInputSchema = z
   .object({
     collection: z.string(),
     field: z.string().optional(),
+    type: z.string().optional(),
     yes: z.boolean().optional(),
     numDim: z.coerce.number().int().positive().optional(),
     vecDist: z.string().optional(),

@@ -8,7 +8,7 @@ export function renderSkill(target: SkillTarget): string {
       "args": ["-y", "@typesensekit/mcp"],
       "env": {
         "TYPESENSE_URL": "https://your-cluster.typesense.net",
-        "TYPESENSE_API_KEY": "your-admin-api-key"
+        "TYPESENSE_API_KEY": "your-scoped-api-key"
       }
     }
   }
