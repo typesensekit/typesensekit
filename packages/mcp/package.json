@@ -1,6 +1,6 @@
 {
   "name": "@typesensekit/mcp",
-  "version": "1.4.4",
+  "version": "1.5.0",
   "mcpName": "io.github.typesensekit/typesensekit",
   "type": "module",
   "main": "dist/server.js",
