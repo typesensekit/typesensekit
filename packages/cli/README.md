@@ -47,3 +47,17 @@ tsk skills mcp
 
 See the [API coverage inventory](https://github.com/typesensekit/typesensekit/blob/main/docs/api-coverage.md)
 for supported Typesense operations.
+
+### Creating API keys
+
+`keys.create` redacts the new key by default. To retrieve it explicitly from the
+CLI, use `--reveal` and store the output securely:
+
+```sh
+tsk keys.create --input '{"value":{"description":"Search only","actions":["documents:search"],"collections":["products"]}}' --reveal --json
+```
+
+MCP output remains redacted. New or updated Keychain-backed profiles use unique
+credential references, so profiles with the same name in separate config files
+do not overwrite each other's keys. Existing references remain readable; saving
+a legacy profile again with `--keychain` migrates it to a new reference.

@@ -55,6 +55,7 @@ describe("stemming dictionary operations", () => {
       "/stemming/dictionaries/import",
       '{"word":"people","root":"person"}\n{"word":"children","root":"child"}',
       { id: "irregular-plurals" },
+      { "Content-Type": "text/plain" },
     );
   });
 
@@ -69,6 +70,7 @@ describe("stemming dictionary operations", () => {
       "/stemming/dictionaries/import",
       words,
       { id: "irregular-plurals" },
+      { "Content-Type": "text/plain" },
     );
   });
 });

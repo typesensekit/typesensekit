@@ -10,6 +10,16 @@ export function isDestructiveOperation(
   name: string,
   input?: Record<string, unknown>,
 ): boolean {
+  if (name === "collections.update") {
+    if (!input) return true;
+    return (
+      Array.isArray(input.fields) &&
+      input.fields.some(
+        (field) =>
+          typeof field === "object" && field !== null && field.drop === true,
+      )
+    );
+  }
   if (name === "api.call") {
     if (!input) return true;
     const method = String(input.method ?? "").toLowerCase();

@@ -193,10 +193,13 @@ export function createMcpHttpServer(
   requestHandler: RequestHandler = handleMcpRequest,
 ) {
   return createServer(async (req, res) => {
-    const url = new URL(
-      req.url ?? "/",
-      `http://${req.headers.host ?? "localhost"}`,
-    );
+    let url: URL;
+    try {
+      url = new URL(req.url ?? "/", "http://localhost");
+    } catch {
+      sendJson(res, 400, jsonRpcError("Invalid request URL"));
+      return;
+    }
 
     if (url.pathname === "/healthz") {
       sendJson(res, 200, { ok: true });

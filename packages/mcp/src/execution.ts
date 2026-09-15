@@ -83,9 +83,14 @@ export class McpExecutionController {
     this.starts.push(now);
     this.active += 1;
     let timeout: NodeJS.Timeout | undefined;
+    const pending = Promise.resolve()
+      .then(task)
+      .finally(() => {
+        this.active -= 1;
+      });
     try {
       return await Promise.race([
-        task(),
+        pending,
         new Promise<never>((_resolve, reject) => {
           timeout = setTimeout(
             () =>
@@ -100,7 +105,6 @@ export class McpExecutionController {
       ]);
     } finally {
       if (timeout) clearTimeout(timeout);
-      this.active -= 1;
     }
   }
 

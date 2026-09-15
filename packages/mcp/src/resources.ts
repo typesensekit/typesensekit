@@ -10,6 +10,10 @@ import {
   type TypesenseClient,
 } from "@typesensekit/core";
 import type { z } from "zod";
+import {
+  type McpExecutionController,
+  sharedMcpExecutionController,
+} from "./execution.js";
 import { type McpOperation, READ_ONLY_OPERATION_NAMES } from "./read-only.js";
 
 type ResourceOperationInput = {
@@ -17,21 +21,21 @@ type ResourceOperationInput = {
   id?: string;
 };
 
-export function jsonContents(uri: string, value: unknown) {
+export function jsonContents(
+  uri: string,
+  value: unknown,
+  execution?: McpExecutionController,
+) {
   return {
     contents: [
       {
         uri,
         mimeType: "application/json",
-        text: JSON.stringify(redactSecrets(value), null, 2),
+        text: execution
+          ? execution.serialize(redactSecrets(value))
+          : JSON.stringify(redactSecrets(value), null, 2),
       },
     ],
-  };
-}
-
-function textContents(uri: string, value: string) {
-  return {
-    contents: [{ uri, mimeType: "text/plain", text: value }],
   };
 }
 
@@ -66,22 +70,13 @@ async function readOperationResource(
   client: TypesenseClient,
   operationName: string,
   input: ResourceOperationInput,
-  uri: string,
 ) {
   const operation = operations.find(
     (candidate) => candidate.name === operationName,
   );
   if (!operation) throw new Error(`${operationName} not found`);
 
-  try {
-    const result = await operation.execute(
-      client,
-      operation.input.parse(input),
-    );
-    return jsonContents(uri, result);
-  } catch (error) {
-    return textContents(uri, formatTypesenseErrorMessage(error));
-  }
+  return operation.execute(client, operation.input.parse(input));
 }
 
 export function registerTypesenseResources(
@@ -89,7 +84,17 @@ export function registerTypesenseResources(
   client: TypesenseClient,
   activeOperations: McpOperation[],
   readOnly: boolean,
+  execution: McpExecutionController = sharedMcpExecutionController(),
 ) {
+  async function read(uri: string, task: () => Promise<unknown>) {
+    try {
+      return await execution.run(async () =>
+        jsonContents(uri, await task(), execution),
+      );
+    } catch (error) {
+      throw new Error(formatTypesenseErrorMessage(error));
+    }
+  }
   server.registerResource(
     "typesensekit-operations",
     "typesensekit://operations",
@@ -99,7 +104,7 @@ export function registerTypesenseResources(
       mimeType: "application/json",
     },
     async (uri) =>
-      jsonContents(uri.href, operationManifest(activeOperations, readOnly)),
+      read(uri.href, async () => operationManifest(activeOperations, readOnly)),
   );
 
   server.registerResource(
@@ -111,9 +116,9 @@ export function registerTypesenseResources(
       mimeType: "application/json",
     },
     async (uri) =>
-      jsonContents(uri.href, {
+      read(uri.href, async () => ({
         operations: [...READ_ONLY_OPERATION_NAMES].sort(),
-      }),
+      })),
   );
 
   server.registerResource(
@@ -127,11 +132,10 @@ export function registerTypesenseResources(
       mimeType: "application/json",
     },
     async (uri, variables) =>
-      readOperationResource(
-        client,
-        "collections.retrieve",
-        { collection: singleVariable(variables.collection, "collection") },
-        uri.href,
+      read(uri.href, () =>
+        readOperationResource(client, "collections.retrieve", {
+          collection: singleVariable(variables.collection, "collection"),
+        }),
       ),
   );
 
@@ -150,14 +154,11 @@ export function registerTypesenseResources(
       mimeType: "application/json",
     },
     async (uri, variables) =>
-      readOperationResource(
-        client,
-        "documents.get",
-        {
+      read(uri.href, () =>
+        readOperationResource(client, "documents.get", {
           collection: singleVariable(variables.collection, "collection"),
           id: singleVariable(variables.id, "id"),
-        },
-        uri.href,
+        }),
       ),
   );
 }

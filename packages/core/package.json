@@ -25,8 +25,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "tsup": "^8.5.1",
-    "@types/node": "^22.10.0"
+    "@types/node": "^22.20.2",
+    "tsup": "^8.5.1"
   },
   "description": "Private operation registry shared by the TypesenseKit packages.",
   "license": "MIT"

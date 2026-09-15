@@ -58,16 +58,21 @@ export async function saveKeychainApiKey(
   apiKey: string,
 ): Promise<void> {
   requireMacOS();
-  await execFile("security", [
-    "add-generic-password",
-    "-U",
-    "-s",
-    KEYCHAIN_SERVICE,
-    "-a",
-    account,
-    "-w",
-    apiKey,
-  ]);
+  try {
+    await execFile("security", [
+      "add-generic-password",
+      "-U",
+      "-s",
+      KEYCHAIN_SERVICE,
+      "-a",
+      account,
+      "-w",
+      apiKey,
+    ]);
+  } catch {
+    // execFile errors include argv, which contains the plaintext API key.
+    throw new Error("Could not save API key to the macOS Keychain");
+  }
 }
 
 export async function loadKeychainApiKey(account: string): Promise<string> {

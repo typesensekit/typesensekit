@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@10.22.0",
   "engines": {
-    "node": ">=22.11"
+    "node": ">=22.12"
   },
   "scripts": {
     "build": "pnpm -r --filter './packages/*' run build && pnpm --filter @typesensekit/web build",
@@ -24,10 +24,10 @@
     "prepublishOnly": "pnpm check"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
-    "@changesets/cli": "^2.31.0",
-    "typescript": "^5.6.3",
-    "vitest": "^4.1.6"
+    "@biomejs/biome": "^2.5.13",
+    "@changesets/cli": "^2.31.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   },
   "description": "CLI and MCP server for the Typesense API.",
   "license": "MIT",

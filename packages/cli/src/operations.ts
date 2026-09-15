@@ -3,7 +3,7 @@ import {
   getTypesenseErrorHint,
   operations,
 } from "@typesensekit/core";
-import { defineCommand } from "citty";
+import { type ArgsDef, defineCommand } from "citty";
 import { confirmDestructiveOperation } from "./confirmation.js";
 import {
   renderInputSchema,
@@ -75,7 +75,15 @@ function waitArgs() {
   } as const;
 }
 
-function operationSpecificArgs(operationName: string) {
+function operationSpecificArgs(operationName: string): ArgsDef {
+  if (operationName === "keys.create")
+    return {
+      reveal: {
+        type: "boolean",
+        description:
+          "Include the newly created API key in output; store it securely",
+      },
+    } as const;
   if (operationName === "collections.wait") return waitArgs();
   if (operationName.startsWith("collections.fields.")) return lifecycleArgs();
   return {};
@@ -146,7 +154,13 @@ export function operationCommands() {
           });
           try {
             const result = await operation.execute(client, input);
-            console.log(render(result, args.json));
+            console.log(
+              render(
+                result,
+                args.json,
+                operation.name === "keys.create" && args.reveal === true,
+              ),
+            );
           } catch (error) {
             const hint = getTypesenseErrorHint(error, input);
             const message = formatTypesenseErrorMessage(error, {

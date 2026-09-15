@@ -176,3 +176,11 @@ describe("MCP HTTP trust boundary", () => {
     expect(response.status).toBe(400);
   });
 });
+
+it("routes requests without trusting the Host header as a URL base", async () => {
+  const { baseUrl } = await start(config());
+  const response = await fetch(`${baseUrl}/healthz`, {
+    headers: { host: "[" },
+  });
+  expect(response.status).toBe(200);
+});

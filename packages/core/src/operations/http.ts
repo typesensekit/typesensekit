@@ -4,7 +4,11 @@ export type Query = Record<string, unknown>;
 
 export type ApiClient = {
   apiCall: {
-    get: <T = unknown>(endpoint: string, queryParameters?: Query) => Promise<T>;
+    get: <T = unknown>(
+      endpoint: string,
+      queryParameters?: Query,
+      options?: { responseType?: "text" },
+    ) => Promise<T>;
     delete: <T = unknown>(
       endpoint: string,
       queryParameters?: Query,
@@ -13,6 +17,8 @@ export type ApiClient = {
       endpoint: string,
       bodyParameters?: unknown,
       queryParameters?: Query,
+      additionalHeaders?: Record<string, string>,
+      options?: { responseType?: "text" },
     ) => Promise<T>;
     put: <T = unknown>(
       endpoint: string,

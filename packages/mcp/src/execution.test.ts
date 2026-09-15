@@ -73,3 +73,31 @@ describe("MCP execution controller", () => {
     );
   });
 });
+
+it("keeps timed-out work counted until it settles", async () => {
+  vi.useFakeTimers();
+  try {
+    const controller = new McpExecutionController({
+      ...baseConfig,
+      maxConcurrency: 1,
+    });
+    let release!: () => void;
+    const pending = controller.run(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const rejection = expect(pending).rejects.toThrow("timed out");
+    await vi.advanceTimersByTimeAsync(100);
+    await rejection;
+    await expect(controller.run(async () => "second")).rejects.toThrow(
+      "concurrency limit",
+    );
+    release();
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(controller.run(async () => "third")).resolves.toBe("third");
+  } finally {
+    vi.useRealTimers();
+  }
+});

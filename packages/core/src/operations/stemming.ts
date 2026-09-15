@@ -42,6 +42,7 @@ export const stemmingOperations = [
               .join("\n")
           : input.words,
         { id: input.id },
+        { "Content-Type": "text/plain" },
       ),
   },
 ] satisfies Operation<z.ZodTypeAny, unknown>[];

@@ -17,13 +17,6 @@ import { filterMcpOperations } from "./read-only.js";
 import { registerTypesenseResources } from "./resources.js";
 import { operationToolAnnotations } from "./tool-metadata.js";
 
-type ToolShape = z.ZodObject<z.ZodRawShape>;
-
-function toToolShape(input: z.ZodTypeAny): z.ZodRawShape {
-  const objectInput = input as ToolShape;
-  return objectInput.shape;
-}
-
 export type TypesenseMcpServerOptions = {
   readOnly?: boolean;
   executionController?: McpExecutionController;
@@ -50,6 +43,7 @@ export function createTypesenseMcpServer(
     client,
     activeOperations,
     mcpOptions.readOnly,
+    execution,
   );
 
   for (const operation of activeOperations) {
@@ -58,7 +52,7 @@ export function createTypesenseMcpServer(
       {
         title: operation.name,
         description: operation.summary,
-        inputSchema: toToolShape(operation.input),
+        inputSchema: operation.input,
         outputSchema: { result: z.unknown() },
         annotations: operationToolAnnotations(operation),
       },
@@ -75,6 +69,7 @@ export function createTypesenseMcpServer(
             operation.execute(client, input),
           );
           const safeResult = redactSecrets(result);
+          const text = execution.serialize(safeResult);
           audit.record({
             timestamp: new Date().toISOString(),
             operation: operation.name,
@@ -86,7 +81,7 @@ export function createTypesenseMcpServer(
             content: [
               {
                 type: "text",
-                text: execution.serialize(safeResult),
+                text,
               },
             ],
           };

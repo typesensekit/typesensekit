@@ -11,9 +11,13 @@
 
 ## Operate Typesense from your terminal or AI agent
 
-TypesenseKit gives humans and AI agents the same **95 typed Typesense operations** through a human-friendly CLI and secure MCP server. MCP access is **read-only by default**; write, delete, key-management, and raw API tools require explicit opt-in.
+TypesenseKit is an independent, open-source CLI and MCP server for Typesense. Inspect collections, run searches, and check cluster health from your terminal or a compatible AI assistant.
+
+Both interfaces share **95 operations with validated inputs**. MCP access is **read-only by default**; enabling full access exposes write, delete, key-management, and raw API tools. Use a scoped Typesense API key to restrict what the server can access.
 
 **[Website](https://typesensekit.vercel.app)** · **[Typesense CLI](https://typesensekit.vercel.app/typesense-cli/)** · **[Typesense MCP](https://typesensekit.vercel.app/typesense-mcp/)** · **[Guides](https://typesensekit.vercel.app/guides/clients/)**
+
+Requires Node.js 22.11 or newer and access to a Typesense cluster. The search example assumes an existing `products` collection with a `title` field.
 
 ```sh
 pnpm add -g @typesensekit/cli
@@ -38,13 +42,6 @@ Typesense work often jumps between dashboards, one-off scripts, local curl comma
 - Confirm destructive CLI operations before they run.
 - Give AI clients read-only tools by default, then opt in to writes deliberately.
 - Reach newer or uncommon endpoints through the raw `api.call` escape hatch.
-
-| | One-off scripts | Typesense client | Basic MCP wrapper | TypesenseKit |
-| --- | --- | --- | --- | --- |
-| Terminal-first workflow | Manual | — | — | Built in |
-| MCP tools | — | — | Yes | Yes |
-| Shared CLI/MCP operations | — | — | Varies | Yes |
-| Safe operational defaults | You build them | Application-owned | Varies | Read-only + confirmations |
 
 Use the official Typesense client in application code. Use TypesenseKit when humans, scripts, and agents need to perform the same operational work.
 

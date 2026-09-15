@@ -3,7 +3,9 @@ import { api, collectionPath, enc } from "./http.js";
 import type { Operation } from "./types.js";
 
 const documentSchema = z.record(z.unknown());
-const idsSchema = z.array(z.string().min(1)).min(1);
+const MAX_BATCH_SIZE = 100;
+const BATCH_CONCURRENCY = 8;
+const idsSchema = z.array(z.string().min(1)).min(1).max(MAX_BATCH_SIZE);
 const searchParams = z.record(
   z.union([
     z.string(),
@@ -55,13 +57,30 @@ export const documentOperations = [
     input: z.object({ collection: z.string(), ids: idsSchema }),
     execute: async (client, input) => {
       const request = api(client);
-      return Promise.all(
-        input.ids.map((id: string) =>
-          request.get(
-            `${collectionPath(input.collection)}/documents/${enc(id)}`,
-          ),
+      const results: unknown[] = new Array(input.ids.length);
+      let next = 0;
+      let failed = false;
+      let failure: unknown;
+      await Promise.all(
+        Array.from(
+          { length: Math.min(BATCH_CONCURRENCY, input.ids.length) },
+          async () => {
+            while (!failed && next < input.ids.length) {
+              const index = next++;
+              try {
+                results[index] = await request.get(
+                  `${collectionPath(input.collection)}/documents/${enc(input.ids[index])}`,
+                );
+              } catch (error) {
+                if (!failed) failure = error;
+                failed = true;
+              }
+            }
+          },
         ),
       );
+      if (failed) throw failure;
+      return results;
     },
   },
   {
@@ -107,6 +126,8 @@ export const documentOperations = [
               .join("\n")
           : input.documents,
         input.action ? { action: input.action } : undefined,
+        { "Content-Type": "text/plain" },
+        { responseType: "text" },
       ),
   },
   {
@@ -121,6 +142,7 @@ export const documentOperations = [
       api(client).get(
         `${collectionPath(input.collection)}/documents/export`,
         input.params,
+        { responseType: "text" },
       ),
   },
   {

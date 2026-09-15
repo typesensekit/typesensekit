@@ -76,3 +76,18 @@ describe("cli output", () => {
     expect(render([])).toBe("No results.");
   });
 });
+
+it("reveals only the generated key when explicitly requested", () => {
+  const key = {
+    value: "new-key",
+    actions: ["documents:search"],
+    collections: ["products"],
+    api_key: "other-secret",
+  };
+  expect(JSON.parse(render(key, true)).value).toBe("[REDACTED]");
+  expect(JSON.parse(render(key, true, true))).toMatchObject({
+    value: "new-key",
+    api_key: "[REDACTED]",
+  });
+  expect(key.api_key).toBe("other-secret");
+});

@@ -1,3 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# tsup still resolves esbuild 0.27; use the patched build tool.
+overrides:
+  "tsup>esbuild": "^0.28.1"

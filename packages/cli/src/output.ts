@@ -1,8 +1,27 @@
 import { readFileSync } from "node:fs";
 import { redactSecrets } from "@typesensekit/core";
 
-export function render(value: unknown, json = false): string {
+export function render(
+  value: unknown,
+  json = false,
+  revealCreatedKey = false,
+): string {
   const safeValue = redactSecrets(value);
+  if (
+    revealCreatedKey &&
+    typeof value === "object" &&
+    value !== null &&
+    typeof safeValue === "object" &&
+    safeValue !== null &&
+    "value" in value &&
+    typeof value.value === "string" &&
+    "actions" in value &&
+    Array.isArray(value.actions) &&
+    "collections" in value &&
+    Array.isArray(value.collections)
+  ) {
+    (safeValue as Record<string, unknown>).value = value.value;
+  }
   if (json || typeof safeValue !== "object" || safeValue === null) {
     return JSON.stringify(safeValue, null, 2);
   }

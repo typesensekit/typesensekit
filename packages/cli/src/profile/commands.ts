@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { operations, serverConfigSchema } from "@typesensekit/core";
 import { defineCommand } from "citty";
 import { confirmAction } from "../confirmation.js";
@@ -87,10 +88,11 @@ export const profileCommand = defineCommand({
             ? Number(args.timeout)
             : undefined,
         });
+        const keychainAccount = args.keychain ? randomUUID() : undefined;
         const profile = args.keychain
-          ? { ...connection, apiKeyKeychain: args.name }
+          ? { ...connection, apiKeyKeychain: keychainAccount }
           : { ...connection, apiKey };
-        if (args.keychain) await saveKeychainApiKey(args.name, apiKey);
+        if (keychainAccount) await saveKeychainApiKey(keychainAccount, apiKey);
         cfg.profiles[args.name] = profile;
         cfg.currentProfile = cfg.currentProfile ?? args.name;
         await saveConfig(cfg, args.config);
