@@ -1,5 +1,5 @@
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
-import type { Operation } from "@typesensekit/core";
+import type { AnyZod, Operation } from "@typesensekit/core";
 import { isDestructiveOperation } from "@typesensekit/core";
 import type { z } from "zod";
 import { READ_ONLY_OPERATION_NAMES } from "./read-only.js";
@@ -15,7 +15,7 @@ function isIdempotent(name: string, readOnly: boolean): boolean {
 }
 
 export function operationToolAnnotations(
-  operation: Operation<z.ZodTypeAny, unknown>,
+  operation: Operation<AnyZod, unknown>,
 ): ToolAnnotations {
   const readOnly = READ_ONLY_OPERATION_NAMES.has(operation.name);
   return {

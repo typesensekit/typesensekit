@@ -1,7 +1,10 @@
 const DESTRUCTIVE_OPERATION_NAMES = new Set([
   "collections.fields.drop",
   "collections.fields.replace",
+  "documents.copy",
+  "documents.delete_by_filter",
   "documents.import",
+  "documents.update_by_filter",
   "operations.cache.clear",
   "operations.vote",
 ]);

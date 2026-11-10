@@ -12,5 +12,15 @@ export {
   normalizeTypesenseError,
 } from "./errors.js";
 export { isDestructiveOperation } from "./operation-safety.js";
-export { type Operation, operations } from "./operations/index.js";
+export {
+  type AnyZod,
+  collectionFieldsHint,
+  compactSearchResult,
+  FILTER_BY_HELP,
+  fieldSummary,
+  type Operation,
+  operationDescription,
+  operations,
+  textFieldNames,
+} from "./operations/index.js";
 export { redactSecrets } from "./redaction.js";

@@ -1,5 +1,4 @@
-import type { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
 
 type JsonValue =
   | string
@@ -9,17 +8,18 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-type JsonSchema = {
+export type JsonSchemaLike = {
+  description?: string;
   type?: string | string[];
   minimum?: number;
   exclusiveMinimum?: number;
   minItems?: number;
   default?: JsonValue;
   enum?: string[];
-  anyOf?: JsonSchema[];
-  items?: JsonSchema;
-  additionalProperties?: JsonSchema | boolean;
-  properties?: Record<string, JsonSchema>;
+  anyOf?: JsonSchemaLike[];
+  items?: JsonSchemaLike;
+  additionalProperties?: JsonSchemaLike | boolean;
+  properties?: Record<string, JsonSchemaLike>;
   required?: string[];
 };
 
@@ -72,7 +72,7 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   ],
   "collections.fields.drop": [{ collection: "products", field: "old_title" }],
   "collections.fields.replace": [
-    { collection: "products", field: "title", type: "string", optional: true },
+    { collection: "products", field: "brand", type: "string", facet: true },
   ],
   "collections.wait": [
     {
@@ -101,18 +101,49 @@ const EXAMPLES: Record<string, JsonValue[]> = {
       document: { id: "sku-1", title: "Lounge chair" },
     },
   ],
+  "documents.update": [
+    { collection: "products", id: "sku-1", document: { price: 29.99 } },
+  ],
+  "curation_sets.items.upsert": [
+    {
+      name: "products-core",
+      id: "featured-chair",
+      value: {
+        rule: { query: "chair", match: "exact" },
+        includes: [{ id: "sku-1", position: 1 }],
+      },
+    },
+  ],
+  "synonym_sets.items.create": [
+    {
+      name: "products-core",
+      id: "sofa-couch",
+      value: { synonyms: ["sofa", "couch"] },
+    },
+  ],
   "documents.get_many": [
     {
       collection: "products",
       ids: ["sku-1", "sku-2"],
     },
   ],
-  "documents.search": [
+  search: [
     {
-      collection: "production__products",
+      collection: "products",
       params: {
         q: "*",
-        query_by: "q",
+        filter_by: "price:<100",
+        sort_by: "price:asc",
+        per_page: 20,
+      },
+    },
+  ],
+  "documents.search": [
+    {
+      collection: "products",
+      params: {
+        q: "chair",
+        query_by: "name,description",
       },
     },
   ],
@@ -203,11 +234,22 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   ],
 };
 
-export function inputObjectSchema(input: z.ZodTypeAny): JsonSchema {
-  return zodToJsonSchema(input, {
-    $refStrategy: "none",
-    target: "jsonSchema7",
-  }) as JsonSchema;
+const schemaCache = new WeakMap<z.ZodTypeAny, JsonSchemaLike>();
+
+export function inputObjectSchema(input: z.ZodTypeAny): JsonSchemaLike {
+  const cached = schemaCache.get(input);
+  if (cached) return cached;
+  // Zod 4's built-in converter (replaces zod-to-json-schema, which does not
+  // support Zod 4). `io: "input"` documents what callers may send (defaults
+  // and coercions apply on parse); unrepresentable types become {}.
+  const schema = z.toJSONSchema(input, {
+    target: "draft-7",
+    io: "input",
+    reused: "inline",
+    unrepresentable: "any",
+  }) as JsonSchemaLike;
+  schemaCache.set(input, schema);
+  return schema;
 }
 
 export function renderInputSchema(input: z.ZodTypeAny): string {
@@ -229,7 +271,10 @@ export function renderOperationExamples(
     .join("\n");
 }
 
-function exampleFromSchema(schema: JsonSchema, propertyName = ""): JsonValue {
+function exampleFromSchema(
+  schema: JsonSchemaLike,
+  propertyName = "",
+): JsonValue {
   if (schema.default !== undefined) return schema.default;
   if (Array.isArray(schema.type))
     return exampleFromSchema({ ...schema, type: schema.type[0] }, propertyName);

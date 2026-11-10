@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 export const keysOperations = [
   {
     name: "keys.list",
     summary: "List API keys",
+    description: "List API keys (values are truncated prefixes).",
     category: "keys",
     input: z.object({}),
     execute: async (client) => api(client).get("/keys"),
@@ -13,8 +14,10 @@ export const keysOperations = [
   {
     name: "keys.create",
     summary: "Create an API key",
+    description:
+      'Create an API key: value {description, actions (e.g. ["documents:search"]), collections (names or ["*"]), expires_at?}. The full key is returned only once.',
     category: "keys",
-    input: z.object({ value: z.record(z.unknown()) }),
+    input: z.object({ value: z.record(z.string(), z.unknown()) }),
     execute: async (client, input) => api(client).post("/keys", input.value),
   },
   {
@@ -33,4 +36,4 @@ export const keysOperations = [
     execute: async (client, input) =>
       api(client).delete(`/keys/${enc(String(input.id))}`),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

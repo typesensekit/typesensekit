@@ -1,9 +1,21 @@
 import { z } from "zod";
 import { api, collectionPath } from "./http.js";
-import type { Operation } from "./types.js";
+import {
+  compactRequestParams,
+  compactSchema,
+  compactSearchResult,
+  FILTER_BY_HELP,
+  searchParamsSchema,
+  takeCompactFlag,
+} from "./search-params.js";
+import type { AnyZod, Operation } from "./types.js";
 
-const searchParams = z.record(z.unknown());
+const searchParams = searchParamsSchema(
+  () => z.unknown(),
+  () => z.unknown(),
+);
 const facetBySchema = z.union([z.string().min(1), z.array(z.string().min(1))]);
+const collectionSchema = z.string().describe("Collection name or alias.");
 
 function withoutUndefined(params: Record<string, unknown>) {
   return Object.fromEntries(
@@ -11,44 +23,123 @@ function withoutUndefined(params: Record<string, unknown>) {
   );
 }
 
+type CompactFlag = ReturnType<typeof takeCompactFlag<Record<string, unknown>>>;
+
+export type SearchInput = {
+  collection: string;
+  params: Record<string, unknown>;
+  compact?: boolean;
+};
+
+export async function runCollectionSearch(
+  client: Parameters<Operation<z.ZodTypeAny, unknown>["execute"]>[0],
+  input: SearchInput,
+) {
+  const path = `${collectionPath(input.collection)}/documents/search`;
+  const nested = takeCompactFlag(input.params);
+  const params = nested.params ?? {};
+  if (!input.compact && !nested.compact) return api(client).get(path, params);
+  const result = await api(client).get(path, compactRequestParams(params));
+  return compactSearchResult(result);
+}
+
+export const SEARCH_DESCRIPTION =
+  "Search a collection/alias. Prefer compact:true and include_fields. Returns found (total), hits (one page), facet_counts. Counts: per_page:0; aggregates: facet_by or group_by. Synonyms and pinned/hidden hits apply unless enable_synonyms/enable_overrides:false.";
+
 export const searchOperations = [
   {
     name: "search",
     summary: "Search a collection",
+    description: SEARCH_DESCRIPTION,
     category: "search",
-    input: z.object({ collection: z.string(), params: searchParams }),
-    execute: async (client, input) =>
-      api(client).get(
-        `${collectionPath(input.collection)}/documents/search`,
-        input.params,
-      ),
+    input: z.object({
+      collection: collectionSchema,
+      params: searchParams,
+      compact: compactSchema,
+    }),
+    execute: async (client, input) => runCollectionSearch(client, input),
   },
   {
     name: "multi_search",
     summary: "Run a Typesense multi-search",
+    description:
+      "Run several searches in one request, across one or more collections. Each entry in `searches` is an object of search parameters plus `collection` (e.g. {collection, q, query_by, filter_by, sort_by, per_page}); `commonParams` apply to all. Returns {results: [...]} in the same order. Use it to answer several independent questions in one call. Set compact: true for smaller results.",
     category: "search",
     input: z.object({
-      searches: z.array(searchParams),
-      commonParams: searchParams.optional(),
+      searches: z
+        .array(z.record(z.string(), z.unknown()))
+        .describe(
+          "Search parameter objects, each with `collection` plus snake_case Typesense search parameters.",
+        ),
+      commonParams: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe("Search parameters applied to every search."),
+      compact: compactSchema,
     }),
-    execute: async (client, input) =>
-      api(client).post(
+    execute: async (client, input) => {
+      const common = takeCompactFlag(input.commonParams);
+      const searches: CompactFlag[] = input.searches.map(
+        (search: Record<string, unknown>) => takeCompactFlag(search),
+      );
+      const allCompact = Boolean(input.compact) || common.compact;
+      const anyCompact =
+        allCompact || searches.some((search) => search.compact);
+      if (!anyCompact) {
+        return api(client).post(
+          "/multi_search",
+          { searches: input.searches },
+          input.commonParams,
+        );
+      }
+      const result = await api(client).post<{ results?: unknown }>(
         "/multi_search",
-        { searches: input.searches },
-        input.commonParams,
-      ),
+        {
+          searches: searches.map((search) =>
+            allCompact || !search.compact
+              ? search.params
+              : compactRequestParams(search.params ?? {}),
+          ),
+        },
+        allCompact ? compactRequestParams(common.params ?? {}) : common.params,
+      );
+      return Array.isArray(result?.results)
+        ? {
+            ...result,
+            results: result.results.map((entry, index) =>
+              allCompact || searches[index]?.compact
+                ? compactSearchResult(entry)
+                : entry,
+            ),
+          }
+        : result;
+    },
   },
   {
     name: "search.facets",
     summary: "Explore facet counts for a collection",
+    description:
+      "Get facet value counts for one or more facet fields (facet: true in the schema), optionally for a query/filter. Returns facet_counts with value counts and, for numeric fields, stats: min, max, sum and avg are computed over every matching document (total_values is only the number of distinct values). Only the top 10 values per field are returned unless you raise maxFacetValues. `found` is the number of matching documents.",
     category: "search",
     input: z.object({
-      collection: z.string(),
-      facetBy: facetBySchema,
+      collection: collectionSchema,
+      facetBy: facetBySchema.describe(
+        "Facet field name(s); comma-separated string or array.",
+      ),
       q: z.string().optional().default("*"),
-      queryBy: z.string().optional(),
-      filterBy: z.string().optional(),
-      maxFacetValues: z.number().int().positive().optional(),
+      queryBy: z
+        .string()
+        .optional()
+        .describe("Fields to search when q is not `*`."),
+      filterBy: z.string().optional().describe(FILTER_BY_HELP),
+      maxFacetValues: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe(
+          "Values per facet field (Typesense default 10). Use e.g. 250 to see all.",
+        ),
       perPage: z.number().int().nonnegative().optional().default(0),
     }),
     execute: async (client, input) =>
@@ -69,9 +160,11 @@ export const searchOperations = [
   {
     name: "search.suggestions",
     summary: "Fetch prefix search suggestions from a collection",
+    description:
+      "Autocomplete-style prefix search: returns up to `limit` hits for a partial query q over queryBy fields.",
     category: "search",
     input: z.object({
-      collection: z.string(),
+      collection: collectionSchema,
       q: z.string(),
       queryBy: z.string(),
       filterBy: z.string().optional(),
@@ -94,4 +187,4 @@ export const searchOperations = [
         }),
       ),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

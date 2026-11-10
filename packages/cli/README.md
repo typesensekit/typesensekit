@@ -61,3 +61,65 @@ MCP output remains redacted. New or updated Keychain-backed profiles use unique
 credential references, so profiles with the same name in separate config files
 do not overwrite each other's keys. Existing references remain readable; saving
 a legacy profile again with `--keychain` migrates it to a new reference.
+
+### Shell discovery and export formats
+
+Dotted commands also accept grouped paths: `tsk collections list --json` is
+an alias for `tsk collections.list --json`. Use `tsk collections --help` for
+only that group's operations. Operation help includes input fields and a runnable
+example; `--schema` still prints the complete JSON schema. Required string input
+fields can also be positional, for example `tsk collections.retrieve products
+--json`. Explicit `--input` values take precedence over positional values.
+
+Every input field can also be a flag (`tsk documents get_many --collection
+books --ids b1,b2`). For `search`, `documents.search`, and `documents.export`,
+other flags are passed through as Typesense parameters, and `q` defaults to `*`:
+
+```sh
+tsk search products --filter-by 'price:<100 && in_stock:=true' --sort-by price:asc --per-page 5 --compact --json
+tsk search products --facet-by brand --max-facet-values 250 --per-page 0 --compact --json
+tsk collections list --compact     # doc counts, aliases, fields with facet/sort flags
+```
+
+With a configured cluster, `tsk`, `tsk --help` and `tsk operations` also print
+this collection overview (parallel collection and alias requests, skipped silently if the cluster is
+unreachable; set `TSK_NO_OVERVIEW=1` to turn it off). `tsk operations` prints
+the cheat sheet and overview on stderr, so its stdout stays one
+`name<TAB>summary` line per operation for scripts. Without `--json`,
+`--compact` search results are printed as valid JSON with one hit or facet
+value per line.
+
+Flat `--input` keys work too: `{"collection":"products","filter_by":"price:<100"}`
+is read as `{"collection":"products","params":{"q":"*","filter_by":"price:<100"}}`.
+
+Export keeps its existing JSON string output, including with `--json`. For direct
+shell processing, select an explicit format:
+
+```sh
+tsk documents.export --input '{"collection":"products"}' --format jsonl | jq -c .
+tsk documents.export --input '{"collection":"products"}' --format array | jq length
+```
+
+Errors print concise messages to stderr and return a nonzero exit status. Add
+`--debug` for diagnostic details and a stack trace.
+
+### Short write and repair workflows
+
+Use JSON directly in flags instead of creating a temporary input file:
+
+```sh
+tsk presets create catalog_search --value '{"query_by":"name,description"}'
+tsk synonym_sets items create catalog-synonyms sofa-couch --value '{"synonyms":["sofa","couch"]}'
+tsk documents update products sku-1 --document '{"price":29.99}'
+tsk keys retrieve 42 --json
+```
+
+To change a field's facet, index, or sort setting, use
+`tsk collections fields replace --collection products --field brand --facet true --yes`.
+It re-indexes stored document values and returns before/after definitions; an
+export/import is unnecessary. Pass every flag you want to retain, because
+omitted flags reset to Typesense defaults. If you do want a backup, write it in
+your working directory (`tsk documents export products --format jsonl > backup.jsonl`).
+
+The CLI builds argument definitions only for the selected operation to reduce
+startup work on each shell invocation.

@@ -44,7 +44,7 @@ describe("operation docs", () => {
         operationInput("documents.search"),
       ),
     ).toContain(
-      `tsk documents.search --input '{"collection":"production__products","params":{"q":"*","query_by":"q"}}' --json`,
+      `tsk documents.search --input '{"collection":"products","params":{"q":"chair","query_by":"name,description"}}' --json`,
     );
     expect(
       renderOperationExamples(
@@ -108,8 +108,10 @@ it("includes validation limits and passthrough properties", () => {
     maximum: 1000,
   });
   expect(schema.properties.userId).toMatchObject({ minLength: 1 });
-  expect(
-    JSON.parse(renderInputSchema(operationInput("collections.fields.add")))
-      .additionalProperties,
-  ).toBe(true);
+  // Passthrough inputs allow extra properties; Zod 4 spells that `{}` (any
+  // value) where zod-to-json-schema used `true`. Both mean the same.
+  const extra = JSON.parse(
+    renderInputSchema(operationInput("collections.fields.add")),
+  ).additionalProperties;
+  expect([true, {}]).toContainEqual(extra);
 });

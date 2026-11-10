@@ -101,3 +101,16 @@ it("keeps timed-out work counted until it settles", async () => {
     vi.useRealTimers();
   }
 });
+
+it("serializes nested data losslessly without indentation overhead", () => {
+  const controller = new McpExecutionController(baseConfig);
+  const value = {
+    hits: [{ document: { title: "a  b\n雪", active: false, price: 0 } }],
+    facets: [],
+    next: null,
+  };
+  const text = controller.serialize(value);
+  expect(JSON.parse(text)).toEqual(value);
+  expect(text).toBe(JSON.stringify(value));
+  expect(text.length).toBeLessThan(JSON.stringify(value, null, 2).length);
+});

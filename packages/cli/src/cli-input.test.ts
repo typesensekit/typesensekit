@@ -1,0 +1,200 @@
+import { expect, it, vi } from "vitest";
+import {
+  coerceFlagValue,
+  hoistParams,
+  parseArgv,
+  snakeCase,
+  unknownKeyHint,
+} from "./cli-input.js";
+import { buildOperationInput } from "./operations.js";
+
+it("parses flag values without stealing positionals after boolean flags", () => {
+  const booleans = new Set(["json", "compact"]);
+  expect(
+    parseArgv(
+      ["--q", "shoes", "products", "--compact", "--per-page=0", "--json"],
+      (key) => booleans.has(key),
+    ),
+  ).toEqual({
+    positionals: ["products"],
+    flags: [
+      { key: "q", value: "shoes" },
+      { key: "compact", value: true },
+      { key: "per-page", value: "0" },
+      { key: "json", value: true },
+    ],
+  });
+  expect(
+    parseArgv(["--facet", "false", "x"], (key) => key === "facet"),
+  ).toEqual({ positionals: ["x"], flags: [{ key: "facet", value: "false" }] });
+  expect(parseArgv(["--offset", "-5"], () => false).flags).toEqual([
+    { key: "offset", value: "-5" },
+  ]);
+});
+
+it("coerces flag values to the schema type", () => {
+  expect(coerceFlagValue("5", { type: "integer" })).toBe(5);
+  expect(coerceFlagValue("false", { type: "boolean" })).toBe(false);
+  expect(coerceFlagValue("a, b", { type: "array" })).toEqual(["a", "b"]);
+  expect(coerceFlagValue('{"a":1}', { type: "object" })).toEqual({ a: 1 });
+  expect(coerceFlagValue("007", { type: "string" })).toBe("007");
+  expect(snakeCase("perPage")).toBe("per_page");
+  expect(snakeCase("filter-by")).toBe("filter_by");
+});
+
+it("moves flat search keys into params and defaults q to *", () => {
+  const keys = ["collection", "params", "compact"];
+  expect(
+    hoistParams(
+      "search",
+      { collection: "c", filter_by: "x:=1", compact: true },
+      keys,
+    ),
+  ).toEqual({
+    collection: "c",
+    compact: true,
+    params: { q: "*", filter_by: "x:=1" },
+  });
+  expect(
+    hoistParams(
+      "documents.search",
+      { collection: "c", per_page: 0, params: { q: "a", per_page: 5 } },
+      keys,
+    ),
+  ).toEqual({ collection: "c", params: { q: "a", per_page: 5 } });
+  expect(hoistParams("documents.export", { collection: "c" }, keys)).toEqual({
+    collection: "c",
+  });
+  expect(hoistParams("aliases.retrieve", { other: 1 }, ["name"])).toEqual({
+    other: 1,
+  });
+});
+
+it("names unknown input fields", () => {
+  expect(unknownKeyHint({ preset_name: "x" }, ["name"])).toBe(
+    "Unknown input field: preset_name. Valid fields: name.",
+  );
+  expect(unknownKeyHint({ name: "x", yes: true }, ["name"])).toBeUndefined();
+});
+
+it("builds search input from positionals and Typesense param flags", () => {
+  expect(
+    buildOperationInput(
+      "search",
+      [
+        "products",
+        "--filter-by",
+        "price:<100",
+        "--per-page",
+        "0",
+        "--compact",
+        "--json",
+      ],
+      { json: true },
+    ),
+  ).toEqual({
+    collection: "products",
+    compact: true,
+    params: { q: "*", filter_by: "price:<100", per_page: "0" },
+  });
+  expect(
+    buildOperationInput(
+      "search",
+      ["--input", '{"collection":"p","params":{"q":"a"}}', "--sort-by", "x"],
+      { input: '{"collection":"p","params":{"q":"a"}}' },
+    ),
+  ).toEqual({ collection: "p", params: { q: "a", sort_by: "x" } });
+});
+
+it("maps --<field> flags onto input fields and rejects unknown options", () => {
+  expect(
+    buildOperationInput(
+      "documents.get_many",
+      ["--collection", "books", "--ids", "a,b"],
+      {},
+    ),
+  ).toEqual({ collection: "books", ids: ["a", "b"] });
+  expect(
+    buildOperationInput(
+      "documents.delete_by_filter",
+      ["products", "--filter-by", "in_stock:=false"],
+      {},
+    ),
+  ).toEqual({ collection: "products", filterBy: "in_stock:=false" });
+  // Unknown flags and extra arguments warn and are ignored, as before.
+  const warn = vi.spyOn(console, "error").mockImplementation(() => {});
+  expect(buildOperationInput("collections.list", ["--bogus", "1"], {})).toEqual(
+    {},
+  );
+  expect(warn).toHaveBeenLastCalledWith(
+    expect.stringContaining("Ignoring unknown option --bogus"),
+  );
+  expect(buildOperationInput("aliases.retrieve", ["a", "b"], {})).toEqual({
+    name: "a",
+  });
+  expect(warn).toHaveBeenLastCalledWith(
+    expect.stringContaining("Ignoring unexpected argument"),
+  );
+  warn.mockRestore();
+});
+
+it("turns extra flags on document writes into document fields", () => {
+  expect(
+    buildOperationInput(
+      "documents.update",
+      ["products", "p5", "--price", "79.99", "--tags", '["a"]', "--sku", "007"],
+      {},
+    ),
+  ).toEqual({
+    collection: "products",
+    id: "p5",
+    document: { price: 79.99, tags: ["a"], sku: "007" },
+  });
+});
+
+it("never lets `--yes false` confirm a destructive operation", () => {
+  // citty pre-parses `--yes false` as yes=true; the input builder corrects it.
+  const args: Record<string, unknown> = { yes: true };
+  buildOperationInput(
+    "documents.delete_by_filter",
+    ["inventory", "--filter-by", "id:*", "--yes", "false"],
+    args,
+  );
+  expect(args.yes).toBe(false);
+  const confirmed: Record<string, unknown> = { yes: true };
+  buildOperationInput(
+    "documents.delete_by_filter",
+    ["inventory", "--filter-by", "id:*", "--yes"],
+    confirmed,
+  );
+  expect(confirmed.yes).toBe(true);
+});
+
+it("uses --params as the params object, with --<param> flags on top", () => {
+  expect(
+    buildOperationInput(
+      "search",
+      ["inventory", "--params", '{"q":"chair","query_by":"title"}'],
+      {},
+    ),
+  ).toMatchObject({
+    collection: "inventory",
+    params: { q: "chair", query_by: "title" },
+  });
+  expect(
+    buildOperationInput(
+      "search",
+      [
+        "inventory",
+        "--params",
+        '{"q":"chair","per_page":5}',
+        "--per-page",
+        "50",
+      ],
+      {},
+    ),
+  ).toMatchObject({ params: { q: "chair", per_page: "50" } });
+  expect(() =>
+    buildOperationInput("search", ["inventory", "--params", "[1]"], {}),
+  ).toThrow("--params must be a JSON object");
+});

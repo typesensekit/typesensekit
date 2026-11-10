@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 export const stopwordsOperations = [
   {
     name: "stopwords.list",
     summary: "List stopwords",
+    description: "List all stopword sets with their words.",
     category: "stopwords",
     input: z.object({}),
     execute: async (client) => api(client).get("/stopwords"),
@@ -16,7 +17,7 @@ export const stopwordsOperations = [
     category: "stopwords",
     input: z.object({
       name: z.string(),
-      value: z.record(z.unknown()),
+      value: z.record(z.string(), z.unknown()),
     }),
     execute: async (client, input) =>
       api(client).put(`/stopwords/${enc(input.name)}`, input.value),
@@ -24,6 +25,7 @@ export const stopwordsOperations = [
   {
     name: "stopwords.retrieve",
     summary: "Retrieve a stopword",
+    description: "Get one stopword set and its words by name.",
     category: "stopwords",
     input: z.object({ name: z.string() }),
     execute: async (client, input) =>
@@ -37,4 +39,4 @@ export const stopwordsOperations = [
     execute: async (client, input) =>
       api(client).delete(`/stopwords/${enc(input.name)}`),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

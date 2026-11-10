@@ -15,7 +15,7 @@ import { stopwordsOperations } from "./stopwords.js";
 import { synonymSetOperations } from "./synonym-sets.js";
 import { synonymsOperations } from "./synonyms.js";
 import { systemOperations } from "./system.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 export const operations = [
   ...collectionOperations,
@@ -35,6 +35,23 @@ export const operations = [
   ...nlSearchModelOperations,
   ...apiOperations,
   ...systemOperations,
-] satisfies Operation<import("zod").ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];
 
-export type { Operation } from "./types.js";
+export function operationDescription(operation: {
+  summary: string;
+  description?: string;
+}): string {
+  return operation.description ?? operation.summary;
+}
+
+export {
+  collectionFieldsHint,
+  fieldSummary,
+  textFieldNames,
+} from "./field-summary.js";
+export {
+  compactSearchResult,
+  FILTER_BY_HELP,
+  searchParamsSchema,
+} from "./search-params.js";
+export type { AnyZod, Operation } from "./types.js";

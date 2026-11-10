@@ -20,7 +20,7 @@ export const storedProfileSchema = serverConfigSchema
 
 export const profileConfigSchema = z.object({
   currentProfile: z.string().optional(),
-  profiles: z.record(storedProfileSchema).default({}),
+  profiles: z.record(z.string(), storedProfileSchema).default({}),
 });
 
 export type ProfileConfig = z.infer<typeof profileConfigSchema>;

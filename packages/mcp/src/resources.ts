@@ -3,6 +3,7 @@ import {
   ResourceTemplate,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
+  type AnyZod,
   formatTypesenseErrorMessage,
   type Operation,
   operations,
@@ -39,7 +40,7 @@ export function jsonContents(
   };
 }
 
-function operationSummary(operation: Operation<z.ZodTypeAny, unknown>) {
+function operationSummary(operation: Operation<AnyZod, unknown>) {
   return {
     name: operation.name,
     summary: operation.summary,

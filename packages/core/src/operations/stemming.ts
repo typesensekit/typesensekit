@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 const wordMappingSchema = z.object({
   word: z.string().min(1),
@@ -11,6 +11,7 @@ export const stemmingOperations = [
   {
     name: "stemming.dictionaries.list",
     summary: "List stemming dictionaries",
+    description: "List the ids of custom stemming dictionaries.",
     category: "stemming",
     input: z.object({}),
     execute: async (client) => api(client).get("/stemming/dictionaries"),
@@ -18,6 +19,7 @@ export const stemmingOperations = [
   {
     name: "stemming.dictionaries.retrieve",
     summary: "Retrieve a stemming dictionary",
+    description: "Get one stemming dictionary's word-to-root mappings.",
     category: "stemming",
     input: z.object({ id: z.string().min(1) }),
     execute: async (client, input) =>
@@ -45,4 +47,4 @@ export const stemmingOperations = [
         { "Content-Type": "text/plain" },
       ),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

@@ -1,0 +1,15 @@
+{
+  "name": "remote-http-mcp",
+  "kind": "mcp",
+  "description": "Template for a third-party Typesense MCP server reached over Streamable HTTP. Copy into evals/interfaces/, rename, and fill in. A hosted server cannot reach the local Docker cluster, so run it with --typesense-url/--typesense-api-key pointing at a disposable cluster that the server also uses (the harness wipes it).",
+  "server": {
+    "type": "http",
+    "url": "${env:REMOTE_MCP_URL}",
+    "headers": { "Authorization": "Bearer ${env:REMOTE_MCP_TOKEN}" }
+  },
+  "modes": {
+    "read-only": {},
+    "full-access": {}
+  },
+  "alwaysLoadTools": true
+}

@@ -13,7 +13,7 @@
 
 TypesenseKit is an independent, open-source CLI and MCP server for Typesense. Inspect collections, run searches, and check cluster health from your terminal or a compatible AI assistant.
 
-Both interfaces share **95 operations with validated inputs**. MCP access is **read-only by default**; enabling full access exposes write, delete, key-management, and raw API tools. Use a scoped Typesense API key to restrict what the server can access.
+Both interfaces share **98 operations with validated inputs**. MCP access is **read-only by default**; enabling full access exposes write, delete, key-management, and raw API tools. Use a scoped Typesense API key to restrict what the server can access.
 
 **[Website](https://typesensekit.vercel.app)** · **[Typesense CLI](https://typesensekit.vercel.app/typesense-cli/)** · **[Typesense MCP](https://typesensekit.vercel.app/typesense-mcp/)** · **[Guides](https://typesensekit.vercel.app/guides/clients/)**
 
@@ -116,6 +116,15 @@ tsk skills hermes
 ```
 
 See the **[Typesense MCP overview](https://typesensekit.vercel.app/typesense-mcp/)**, **[MCP guide](https://typesensekit.vercel.app/guides/mcp/)**, and **[client setup guide](https://typesensekit.vercel.app/guides/clients/)** for Claude Desktop, Claude Code, Codex, Cursor, generic MCP clients, Streamable HTTP, and Docker.
+
+### Agent guidance
+
+The server sends MCP instructions (discovery, search parameters, filter syntax,
+facets, synonym and curation sets, schema changes), and every tool has an
+agent-oriented description. Failed calls include a `Hint:` line for common
+Typesense errors. Pass `compact: true` to `search`, `documents.search`, or
+`multi_search` to return hits as `{document}` only, without highlight and
+text-match metadata, which keeps large result pages within an agent's context.
 
 ### MCP resources
 

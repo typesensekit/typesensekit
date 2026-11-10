@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TypesenseClient } from "../client.js";
 import { collectionOperations } from "./collections.js";
+import { collectionFieldsHint } from "./field-summary.js";
 
 function getOperation(name: string) {
   const operation = collectionOperations.find(
@@ -217,4 +218,175 @@ describe("collection operations", () => {
       fields: [newField],
     });
   });
+
+  it("replaces a field with new flags, keeping its type when omitted", async () => {
+    const replaceOperation = getOperation("collections.fields.replace");
+    const oldField = { name: "views", type: "int32", sort: false };
+    const newField = { name: "views", type: "int32", sort: true };
+    const get = vi
+      .fn()
+      .mockResolvedValueOnce({ fields: [oldField] })
+      .mockResolvedValueOnce({ fields: [oldField] })
+      .mockResolvedValueOnce({ fields: [] })
+      .mockResolvedValueOnce({ fields: [newField] })
+      .mockResolvedValueOnce({ fields: [newField], num_documents: 24 });
+    const patch = vi.fn().mockResolvedValue({ ok: true });
+    const client = { apiCall: { get, patch } } as unknown as TypesenseClient;
+
+    await expect(
+      replaceOperation.execute(
+        client,
+        replaceOperation.input.parse({
+          collection: "support",
+          field: "views",
+          sort: true,
+          timeoutMs: 100,
+          intervalMs: 0,
+        }),
+      ),
+    ).resolves.toMatchObject({
+      before: oldField,
+      after: newField,
+      num_documents: 24,
+    });
+    expect(patch).toHaveBeenNthCalledWith(2, "/collections/support", {
+      fields: [newField],
+    });
+  });
+
+  it("names MCP input fields when a wait condition is missing", async () => {
+    const waitOperation = getOperation("collections.wait");
+    const get = vi.fn().mockResolvedValue({ fields: [] });
+    const client = { apiCall: { get } } as unknown as TypesenseClient;
+    await expect(
+      waitOperation.execute(
+        client,
+        waitOperation.input.parse({ collection: "products" }),
+      ),
+    ).rejects.toThrow("fieldPresent, fieldMissing, or fieldEmbedFrom");
+  });
+});
+
+it("keeps collection listing unchanged unless compact discovery is requested", async () => {
+  const operation = getOperation("collections.list");
+  const collections = [
+    {
+      name: "inventory",
+      num_documents: 9,
+      created_at: 123,
+      default_sorting_field: "price",
+      synonym_sets: ["terms"],
+      curation_sets: ["rules"],
+      fields: [
+        {
+          name: "price",
+          type: "float",
+          facet: true,
+          sort: true,
+          index: true,
+          optional: false,
+          locale: "",
+          infix: false,
+        },
+      ],
+    },
+  ];
+  const aliases = {
+    aliases: [{ name: "catalog", collection_name: "inventory" }],
+  };
+  const get = vi
+    .fn()
+    .mockImplementation(async (path: string) =>
+      path === "/aliases" ? aliases : collections,
+    );
+  const client = { apiCall: { get } } as unknown as TypesenseClient;
+  for (const args of [{}, { compact: false }]) {
+    await expect(
+      operation.execute(client, operation.input.parse(args)),
+    ).resolves.toBe(collections);
+  }
+  expect(get).not.toHaveBeenCalledWith("/aliases");
+  const result = await operation.execute(
+    client,
+    operation.input.parse({ compact: true }),
+  );
+  expect(result).toEqual({
+    collections: [
+      {
+        name: "inventory",
+        num_documents: 9,
+        aliases: ["catalog"],
+        default_sorting_field: "price",
+        synonym_sets: ["terms"],
+        curation_sets: ["rules"],
+        fields: ["price: float [facet, sort]"],
+      },
+    ],
+  });
+  expect(collections[0]?.fields[0]).toHaveProperty("infix", false);
+});
+
+it("compacts fields to non-default flags and keeps dangling aliases", async () => {
+  const operation = getOperation("collections.list");
+  const collections = [
+    {
+      name: "articles",
+      num_documents: 2,
+      default_sorting_field: "",
+      synonym_sets: [],
+      curation_sets: [],
+      fields: [
+        { name: "title", type: "string", facet: false, index: true },
+        { name: "area", type: "string", index: false, optional: true },
+        { name: "views", type: "int32", sort: true, facet: true },
+      ],
+    },
+  ];
+  const aliases = {
+    aliases: [
+      { name: "help", collection_name: "articles" },
+      { name: "old", collection_name: "missing" },
+    ],
+  };
+  const get = vi
+    .fn()
+    .mockImplementation(async (path: string) =>
+      path === "/aliases" ? aliases : collections,
+    );
+  const client = { apiCall: { get } } as unknown as TypesenseClient;
+  await expect(
+    operation.execute(client, operation.input.parse({ compact: true })),
+  ).resolves.toEqual({
+    collections: [
+      {
+        name: "articles",
+        num_documents: 2,
+        aliases: ["help"],
+        text_fields: "title",
+        fields: [
+          "title: string",
+          "area: string [index:false, optional]",
+          "views: int32 [facet, sort]",
+        ],
+      },
+    ],
+    aliases: [{ name: "old", collection_name: "missing" }],
+  });
+});
+
+it("lists fields and query_by candidates for error hints", () => {
+  expect(
+    collectionFieldsHint({
+      name: "articles",
+      fields: [
+        { name: "title", type: "string" },
+        { name: "area", type: "string", index: false },
+        { name: "tags", type: "string[]", facet: true },
+        { name: "views", type: "int32", sort: true },
+      ],
+    }),
+  ).toBe(
+    "Fields of articles: title: string; area: string [index:false]; tags: string[] [facet]; views: int32 [sort].\nText fields for query_by: title,tags.",
+  );
+  expect(collectionFieldsHint({ name: "empty", fields: [] })).toBeUndefined();
 });

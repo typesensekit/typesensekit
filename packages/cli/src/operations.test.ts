@@ -5,6 +5,12 @@ import { operationCommands } from "./operations.js";
 vi.mock("./profile/resolve.js", () => ({
   resolveClient: vi.fn(async () => ({
     apiCall: {
+      get: vi.fn(async (path: string) =>
+        path.endsWith("/documents/export")
+          ? '{"id":"1"}\n{"id":"2"}\n'
+          : { name: path },
+      ),
+      delete: vi.fn(async (path: string) => ({ deleted: path })),
       post: vi.fn(async () => ({
         value: "generated-key",
         actions: ["documents:search"],
@@ -36,5 +42,79 @@ it("requires explicit CLI reveal for newly created keys", async () => {
   expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toMatchObject({
     value: "generated-key",
     api_key: "[REDACTED]",
+  });
+});
+
+it("reports validation errors with a usable invocation", async () => {
+  const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  const command = operationCommands()["keys.create"];
+  if (!command) throw new Error("Missing command");
+  // Validation errors include a directly usable invocation, without a Zod stack.
+  await expect(runCommand(command, { rawArgs: [] })).rejects.toThrow(
+    "tsk keys.create --input",
+  );
+  expect(output).not.toHaveBeenCalled();
+});
+
+it("accepts positional names and lets explicit JSON take precedence", async () => {
+  const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  const command = operationCommands()["aliases.retrieve"];
+  if (!command) throw new Error("Missing command");
+  await runCommand(command, { rawArgs: ["catalog", "--json"] });
+  expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toEqual({
+    name: "/aliases/catalog",
+  });
+  await runCommand(command, {
+    rawArgs: ["catalog", "--input", '{"name":"other"}', "--json"],
+  });
+  expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toEqual({
+    name: "/aliases/other",
+  });
+});
+
+it("adds raw JSONL and array exports while preserving the existing JSON string", async () => {
+  const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  const command = operationCommands()["documents.export"];
+  if (!command) throw new Error("Missing command");
+  const rawArgs = ["--input", '{"collection":"products"}'];
+  await runCommand(command, { rawArgs: [...rawArgs, "--json"] });
+  expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toBe(
+    '{"id":"1"}\n{"id":"2"}\n',
+  );
+  await runCommand(command, { rawArgs: [...rawArgs, "--format", "jsonl"] });
+  expect(String(output.mock.calls.at(-1)?.[0])).toBe('{"id":"1"}\n{"id":"2"}');
+  await runCommand(command, { rawArgs: [...rawArgs, "--format", "array"] });
+  expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toEqual([
+    { id: "1" },
+    { id: "2" },
+  ]);
+});
+
+it("treats yes: true in --input JSON as confirmation", async () => {
+  const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  const command = operationCommands()["documents.delete"];
+  if (!command) throw new Error("Missing command");
+  await expect(
+    runCommand(command, { rawArgs: ["products", "p1", "--json"] }),
+  ).rejects.toThrow("Pass --yes");
+  await runCommand(command, {
+    rawArgs: [
+      "--input",
+      '{"collection":"products","id":"p1","yes":true}',
+      "--json",
+    ],
+  });
+  expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toEqual({
+    deleted: "/collections/products/documents/p1",
+  });
+});
+
+it("accepts numeric key IDs positionally without an extra --input call", async () => {
+  const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  const command = operationCommands()["keys.retrieve"];
+  if (!command) throw new Error("Missing command");
+  await runCommand(command, { rawArgs: ["42", "--json"] });
+  expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toEqual({
+    name: "/keys/42",
   });
 });

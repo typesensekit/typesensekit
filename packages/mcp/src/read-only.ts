@@ -1,4 +1,4 @@
-import type { Operation } from "@typesensekit/core";
+import type { AnyZod, Operation } from "@typesensekit/core";
 import type { z } from "zod";
 
 export const READ_ONLY_OPERATION_NAMES = new Set([
@@ -49,7 +49,7 @@ export const READ_ONLY_OPERATION_NAMES = new Set([
   "synonyms.retrieve",
 ]);
 
-export type McpOperation = Operation<z.ZodTypeAny, unknown>;
+export type McpOperation = Operation<AnyZod, unknown>;
 
 export function isReadOnlyOperation(operation: McpOperation): boolean {
   return READ_ONLY_OPERATION_NAMES.has(operation.name);

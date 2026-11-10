@@ -1,0 +1,26 @@
+{
+  "name": "typesensekit-mcp",
+  "kind": "mcp",
+  "description": "TypesenseKit MCP server over stdio (packages/mcp). Read-only by default; full access sets TYPESENSEKIT_READ_ONLY=false.",
+  "requires": ["${REPO_ROOT}/packages/mcp/dist/cli.js"],
+  "server": {
+    "type": "stdio",
+    "command": "${NODE}",
+    "args": ["${REPO_ROOT}/packages/mcp/dist/cli.js"],
+    "env": {
+      "TYPESENSE_URL": "${TYPESENSE_URL}",
+      "TYPESENSE_API_KEY": "${TYPESENSE_API_KEY}"
+    }
+  },
+  "modes": {
+    "read-only": { "env": {} },
+    "full-access": { "env": { "TYPESENSEKIT_READ_ONLY": "false" } }
+  },
+  "alwaysLoadTools": true,
+  "allowResources": true,
+  "toolGroups": [
+    ["search", "documents.search"],
+    ["synonyms.list", "synonym_sets.list"],
+    ["overrides.list", "curation_sets.list"]
+  ]
+}
