@@ -45,7 +45,7 @@ function commonSearchParamShape(value: ParamValue) {
       "e.g. `price:asc` or `rating:desc,price:asc` (max 3). Field must be numeric or have sort: true. Default: text match, then default_sorting_field.",
     ),
     facet_by: param(
-      "Comma-separated facet fields (facet: true). Numeric facets also return stats (min, max, sum, avg).",
+      "Comma-separated facet fields (facet: true). Numeric facets also return stats: min/max/sum/avg over every matching document (total_values = distinct values only).",
     ),
     max_facet_values: param(
       "Facet values returned per field. Default 10: raise it (e.g. 250) when you need every value.",

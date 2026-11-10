@@ -97,7 +97,7 @@ export const searchOperations = [
     name: "search.facets",
     summary: "Explore facet counts for a collection",
     description:
-      "Get facet value counts for one or more facet fields (facet: true in the schema), optionally for a query/filter. Returns facet_counts with value counts and, for numeric fields, stats (min, max, sum, avg). Only the top 10 values per field are returned unless you raise maxFacetValues. `found` is the number of matching documents.",
+      "Get facet value counts for one or more facet fields (facet: true in the schema), optionally for a query/filter. Returns facet_counts with value counts and, for numeric fields, stats: min, max, sum and avg are computed over every matching document (total_values is only the number of distinct values). Only the top 10 values per field are returned unless you raise maxFacetValues. `found` is the number of matching documents.",
     category: "search",
     input: z.object({
       collection: collectionSchema,

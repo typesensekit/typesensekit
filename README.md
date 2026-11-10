@@ -117,6 +117,15 @@ tsk skills hermes
 
 See the **[Typesense MCP overview](https://typesensekit.vercel.app/typesense-mcp/)**, **[MCP guide](https://typesensekit.vercel.app/guides/mcp/)**, and **[client setup guide](https://typesensekit.vercel.app/guides/clients/)** for Claude Desktop, Claude Code, Codex, Cursor, generic MCP clients, Streamable HTTP, and Docker.
 
+### Agent guidance
+
+The server sends MCP instructions (discovery, search parameters, filter syntax,
+facets, synonym and curation sets, schema changes), and every tool has an
+agent-oriented description. Failed calls include a `Hint:` line for common
+Typesense errors. Pass `compact: true` to `search`, `documents.search`, or
+`multi_search` to return hits as `{document}` only, without highlight and
+text-match metadata, which keeps large result pages within an agent's context.
+
 ### MCP resources
 
 | Resource | Purpose |
