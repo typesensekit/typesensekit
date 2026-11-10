@@ -8,7 +8,7 @@
  * permission mode.
  */
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   type EffortLevel,
@@ -26,6 +26,7 @@ import {
   prepareCliShell,
   templateVars,
 } from "./interfaces.js";
+import { EVALS_ROOT } from "./paths.js";
 import { checkShellCommand } from "./shell-guard.js";
 import type { Mode } from "./types.js";
 import type { TypesenseHttp } from "./typesense.js";
@@ -52,6 +53,12 @@ export type AgentSettings = {
   timeoutMs: number;
   effort?: EffortLevel;
   auth: ResolvedAuth;
+  /**
+   * OS-level sandbox for CLI arms (default true). Turning it off removes the
+   * containment boundary; only do so for runs that must stay token-comparable
+   * with results recorded without it (it adds ~4.6k prompt tokens per turn).
+   */
+  osSandbox?: boolean;
 };
 
 export type AgentSession = {
@@ -100,6 +107,40 @@ function guardHook(config: InterfaceConfig, cwd: string): HookCallback {
       if (!verdict.allowed) return deny(verdict.reason);
     }
     return allow;
+  };
+}
+
+/**
+ * OS-level containment for the CLI arm's Bash tool (Seatbelt on macOS,
+ * bubblewrap on Linux). This, not the command allowlist, is the boundary:
+ * writes only inside the session directory, no reads of the benchmark's own
+ * files (tasks, answers, results) or common credential stores, and network
+ * only to the local Typesense cluster. Fails closed if unavailable.
+ */
+export function cliSandbox(
+  sessionRoot: string,
+): NonNullable<Options["sandbox"]> {
+  const home = homedir();
+  return {
+    enabled: true,
+    failIfUnavailable: true,
+    autoAllowBashIfSandboxed: true,
+    allowUnsandboxedCommands: false,
+    filesystem: {
+      allowWrite: [sessionRoot, realpathSync(sessionRoot)],
+      denyRead: [
+        EVALS_ROOT,
+        join(home, ".ssh"),
+        join(home, ".aws"),
+        join(home, ".gnupg"),
+        join(home, ".claude"),
+        join(home, ".config"),
+      ],
+    },
+    network: {
+      allowedDomains: ["127.0.0.1", "localhost"],
+      allowLocalBinding: true,
+    },
   };
 }
 
@@ -164,6 +205,9 @@ export function startAgent(params: {
     hooks: {
       PreToolUse: [{ hooks: [guardHook(config, cwd)], onFailure: "block" }],
     },
+    ...(config.kind === "cli" && settings.osSandbox !== false
+      ? { sandbox: cliSandbox(root) }
+      : {}),
     maxTurns: settings.maxTurns,
     maxBudgetUsd: settings.maxBudgetUsd,
     ...(settings.effort ? { effort: settings.effort } : {}),

@@ -56,6 +56,8 @@ Agent limits (per attempt)
       --max-budget <usd>  default 1.00
       --timeout <s>       default 300
       --effort <level>    low | medium | high | xhigh | max (default: model default)
+      --no-os-sandbox     run CLI arms without the OS sandbox (removes containment;
+                          only for token-comparable reruns of older results)
 
 Auth
       --auth <mode>       auto | api-key | oauth-token | auth-token | claude-login
@@ -105,6 +107,7 @@ function parse() {
       list: { type: "boolean", default: false },
       report: { type: "string" },
       reanalyze: { type: "boolean", default: false },
+      "no-os-sandbox": { type: "boolean", default: false },
       yes: { type: "boolean", short: "y", default: false },
       results: { type: "string", default: join(EVALS_ROOT, "results") },
       help: { type: "boolean", short: "h", default: false },
@@ -331,6 +334,58 @@ async function inspectCommand(args: Args, configs: InterfaceConfig[]) {
   }
 }
 
+function harnessErrorRecord(
+  runId: string,
+  job: {
+    task: Task;
+    config: InterfaceConfig;
+    model: string;
+    repetition: number;
+  },
+  transcriptPath: string,
+  message: string,
+): AttemptRecord {
+  return {
+    runId,
+    interface: job.config.name,
+    model: job.model,
+    taskId: job.task.id,
+    category: job.task.category,
+    difficulty: job.task.difficulty,
+    mode: job.task.mode,
+    repetition: job.repetition,
+    pass: false,
+    failureMode: "harness_error",
+    gradeDetail: `harness error: ${message}`,
+    finalAnswer: null,
+    turns: 0,
+    toolsAvailable: 0,
+    toolCalls: 0,
+    discoveryCalls: 0,
+    toolErrors: 0,
+    errorsByKind: {
+      denied: 0,
+      unknown_tool: 0,
+      invalid_args: 0,
+      typesense: 0,
+      other: 0,
+    },
+    duplicateCalls: 0,
+    unknownOpCalls: 0,
+    alternateToolMixes: 0,
+    opsUsed: {},
+    errorSamples: [],
+    inputTokens: 0,
+    cacheReadTokens: 0,
+    cacheCreationTokens: 0,
+    outputTokens: 0,
+    costUsd: 0,
+    wallMs: 0,
+    transcriptPath,
+    startedAt: new Date().toISOString(),
+  };
+}
+
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-").replace(/Z$/, "");
 }
@@ -402,6 +457,7 @@ async function runCommand(
       timeoutMs: args.timeoutMs,
       effort: args.effort ?? "default",
       auth: auth.mode,
+      osSandbox: !args["no-os-sandbox"],
       tasks: args.tasks ?? "all",
     },
   };
@@ -425,6 +481,7 @@ async function runCommand(
     }
   }
   const attempts: AttemptRecord[] = [];
+  let harnessErrors = 0;
   let next = 0;
   let done = 0;
   const worker = async (cluster: Cluster) => {
@@ -437,6 +494,7 @@ async function runCommand(
         timeoutMs: args.timeoutMs,
         effort: args.effort,
         auth,
+        osSandbox: !args["no-os-sandbox"],
       };
       const transcriptPath = join(
         runDir,
@@ -455,10 +513,14 @@ async function runCommand(
           transcriptPath,
         });
       } catch (error) {
+        // Record the failure so a crashed attempt can never vanish from the
+        // pass rate; the run also exits nonzero.
+        harnessErrors++;
+        const message = error instanceof Error ? error.message : String(error);
         console.error(
-          `harness error on ${job.config.name} ${job.model} ${job.task.id}: ${error instanceof Error ? error.stack : String(error)}`,
+          `harness error on ${job.config.name} ${job.model} ${job.task.id}: ${error instanceof Error ? error.stack : message}`,
         );
-        continue;
+        record = harnessErrorRecord(runId, job, transcriptPath, message);
       }
       attempts.push(record);
       appendFileSync(attemptsPath, `${JSON.stringify(record)}\n`);
@@ -489,6 +551,12 @@ async function runCommand(
   console.log(
     `\nReport: ${relative(process.cwd(), join(runDir, "summary.md"))}`,
   );
+  if (harnessErrors > 0) {
+    console.error(
+      `${harnessErrors} attempt(s) failed inside the harness and are recorded as failures (failureMode harness_error). Treat this run as incomplete.`,
+    );
+    process.exitCode = 1;
+  }
 }
 
 async function main() {

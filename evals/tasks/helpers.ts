@@ -62,3 +62,39 @@ export async function attempt(
     );
   }
 }
+
+/**
+ * Passes when `collection` holds exactly the expected documents, compared
+ * field by field (ids, values, and nothing missing or extra).
+ */
+export async function sameDocuments(
+  ts: TypesenseHttp,
+  collection: string,
+  expected: Record<string, unknown>[] | object[],
+): Promise<StateCheckResult> {
+  const actual = new Map(
+    (await ts.exportDocuments<Record<string, unknown>>(collection)).map(
+      (doc) => [String(doc.id), doc],
+    ),
+  );
+  const rows = expected as Record<string, unknown>[];
+  const problems: string[] = [];
+  for (const want of rows) {
+    const got = actual.get(String(want.id));
+    if (!got) {
+      problems.push(`${want.id} missing`);
+      continue;
+    }
+    const changed = Object.keys(want).filter(
+      (key) => JSON.stringify(got[key]) !== JSON.stringify(want[key]),
+    );
+    if (changed.length > 0)
+      problems.push(`${want.id} differs in ${changed.join(", ")}`);
+  }
+  if (actual.size !== rows.length) {
+    problems.push(`${actual.size} documents, expected ${rows.length}`);
+  }
+  return problems.length === 0
+    ? ok(`${collection} holds all ${rows.length} documents intact`)
+    : fail(`${collection}: ${problems.slice(0, 3).join("; ")}`);
+}

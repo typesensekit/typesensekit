@@ -101,19 +101,32 @@ the worst case (`attempts × --max-budget`) before anything starts.
      `ReadMcpResourceTool` when `allowResources` is set. They have no built-in
      file or shell tools. `alwaysLoadTools` (default true) disables tool-search
      deferral, so the full tool-definition cost is part of the measurement.
-   - **CLI arms** see only `Bash`. A `PreToolUse` hook that cannot be bypassed
-     (`src/shell-guard.ts`) allows only `allowedCommands` (`tsk`, `jq`, `head`,
-     `grep`, `cat`, …). Command substitution, process substitution, heredocs,
-     and file redirection are allowed, with substituted commands checked
-     recursively. Shell loops, conditionals, and variables work. Files can be
-     read and written only inside the session's temp working directory
-     (relative or absolute paths). Blocked: paths that leave it (`/tmp`,
-     `~`, `..`), backgrounding, setting protected variables (`PATH`,
-     `HOME`, `TYPESENSE_*`, …), and `sed`/`awk`, which can run commands or
-     write arbitrary files. `tsk` is a PATH shim to
-     `packages/cli/dist/cli.js`, configured through `TYPESENSE_URL` /
-     `TYPESENSE_API_KEY`. The agent has to discover usage itself with
-     `tsk operations`, `--help`, `--schema`, and `--examples`.
+   - **CLI arms** see only `Bash`, contained in two layers:
+     - **OS sandbox (the boundary).** The Agent SDK's sandbox (Seatbelt on
+       macOS, bubblewrap on Linux; `cliSandbox` in `src/agent.ts`) lets the
+       Bash process write only inside the session's temp directory, denies
+       reads of `evals/` (tasks, answers, results) and credential stores
+       (`~/.ssh`, `~/.aws`, `~/.claude`, `~/.config`, `~/.gnupg`), and allows
+       network only to localhost, where the Typesense cluster runs. It fails
+       closed if the sandbox is unavailable. It also adds about 4.6k prompt tokens per
+       turn (Claude Code's sandbox instructions on the Bash tool), so CLI token
+       and cost numbers are only comparable between runs with the same setting.
+       `--no-os-sandbox` turns it off; the run's `meta.json` records which was
+       used.
+     - **Command allowlist (policy).** A `PreToolUse` hook
+       (`src/shell-guard.ts`) keeps the agent to the interface under test: only
+       `allowedCommands` (`tsk`, `jq`, `head`, `grep`, `cat`, …), with
+       substituted commands checked recursively, and no `sed`/`awk`, protected
+       variables (`PATH`, `NODE_OPTIONS`, `TYPESENSE_*`, …), backgrounding,
+       expansions in redirection targets, or command substitution in unquoted
+       heredocs. It also rejects paths that visibly leave the working
+       directory. Being lexical, it cannot see through variable expansion,
+       which is why the OS sandbox is the actual containment.
+
+     `tsk` is a PATH shim to `packages/cli/dist/cli.js` with a private HOME,
+     configured through `TYPESENSE_URL` / `TYPESENSE_API_KEY`. The agent has to
+     discover usage itself with `tsk operations`, `--help`, `--schema`, and
+     `--examples`.
 4. **Grading.**
    - Answer tasks take the last `FINAL ANSWER:` line and compare it, after
      normalization, as exact text, a number within a tolerance, an unordered
@@ -124,7 +137,8 @@ the worst case (`attempts × --max-budget`) before anything starts.
    - State tasks (debugging and write, full-access) inspect the cluster
      afterwards with direct HTTP. The checks are behavioral (does `couch` now
      find every sofa? does faceting by category work, with no articles
-     lost?), so any valid fix passes.
+     lost?), so any valid fix passes. Data-preservation checks compare
+     documents field by field against the seed.
 
 ### Modes
 
@@ -140,7 +154,7 @@ the report.
 
 | Metric | Definition |
 | --- | --- |
-| `pass`, `failureMode` | `passed`, `wrong_answer`, `no_final_answer`, `state_not_reached`, `max_turns`, `budget_exceeded`, `timeout`, `agent_error` |
+| `pass`, `failureMode` | `passed`, `wrong_answer`, `no_final_answer`, `state_not_reached`, `max_turns`, `budget_exceeded`, `timeout`, `agent_error`, `harness_error` (the harness failed, e.g. seeding; counted as a failure and the run exits nonzero) |
 | `turns` | `num_turns` from the SDK result |
 | `toolsAvailable` | tools in the session's init message |
 | `toolCalls`, `discoveryCalls` | all calls; CLI calls that only ran `operations`/`--help`/`--schema`/`--examples` |
@@ -272,11 +286,14 @@ Add a task to `tasks/read.ts` (answer, read-only), `tasks/debug.ts`, or
   `uniqueMax` or `nthMostCommon`, which throw on ties. Also give a plausible
   wrong `decoy`.
 - State tasks: `check(ts)` returns `{ pass, detail }` from direct HTTP reads,
-  and `reference(ts)` performs a correct fix with direct HTTP.
+  and `reference(ts)` performs a correct fix with direct HTTP. Optionally add
+  `decoy(ts)`, a plausible but wrong end state (e.g. a lossy copy) that the
+  check must reject.
 
 Then run `pnpm eval --dry-run -t <id>`. It must show the expected value, that
 the grader accepts it and rejects the decoy, and, for state tasks, that the
-check fails on a fresh seed and passes after the reference fix.
+check fails on a fresh seed and on the decoy state, and passes after the
+reference fix.
 
 ## What the eval is designed to surface
 

@@ -6,7 +6,13 @@
  */
 import { allOf, type Book, fail, ok, type Product } from "../src/oracle.js";
 import type { StateTask } from "../src/types.js";
-import { allHitIds, attempt, docCount, seedRows } from "./helpers.js";
+import {
+  allHitIds,
+  attempt,
+  docCount,
+  sameDocuments,
+  seedRows,
+} from "./helpers.js";
 
 type WriteTask = Omit<StateTask, "kind" | "mode">;
 
@@ -169,7 +175,6 @@ const writes: WriteTask[] = [
     prompt:
       "We want to sort the library by title, but title isn't sortable. Create a new collection books_v2 with every book and a sortable title, then switch the library over to it. Keep the old books collection around for rollback.",
     check: async (ts) => {
-      const ids = seedBooks().map((b) => b.id);
       return attempt("books_v2 check fails", () =>
         allOf([
           async () => {
@@ -180,17 +185,7 @@ const writes: WriteTask[] = [
               ? ok("library -> books_v2")
               : fail(`library -> ${alias?.collection_name ?? "(missing)"}`);
           },
-          async () => {
-            const copied = (await ts.exportDocuments<Book>("books_v2")).map(
-              (b) => b.id,
-            );
-            const missing = ids.filter((id) => !copied.includes(id));
-            return missing.length === 0 && copied.length === ids.length
-              ? ok(`books_v2 has all ${ids.length} books`)
-              : fail(
-                  `books_v2 has ${copied.length} books; missing ${missing.slice(0, 5).join(", ")}`,
-                );
-          },
+          () => sameDocuments(ts, "books_v2", seedBooks()),
           async () => {
             await ts.search("books_v2", {
               q: "*",
@@ -199,9 +194,31 @@ const writes: WriteTask[] = [
             });
             return ok("books_v2 sorts by title");
           },
-          () => docCount(ts, "books", ids.length),
+          // The rollback copy must be intact too.
+          () => sameDocuments(ts, "books", seedBooks()),
         ]),
       );
+    },
+    // A copy with every id but the contents lost must not pass.
+    decoy: async (ts) => {
+      await ts.request("POST", "/collections", {
+        name: "books_v2",
+        fields: [{ name: "title", type: "string", sort: true }],
+      });
+      const jsonl = seedBooks()
+        .map((b) => JSON.stringify({ id: b.id, title: "DATA LOST" }))
+        .join("\n");
+      await ts.request(
+        "POST",
+        "/collections/books_v2/documents/import",
+        jsonl,
+        {
+          action: "create",
+        },
+      );
+      await ts.request("PUT", "/aliases/library", {
+        collection_name: "books_v2",
+      });
     },
     reference: async (ts) => {
       const schema = await ts.get<{

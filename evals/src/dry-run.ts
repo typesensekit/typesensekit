@@ -58,10 +58,19 @@ export async function validateTasks(
         const before = await task.check(ts);
         await task.reference(ts);
         const after = await task.check(ts);
+        let decoyDetail = "";
+        let decoyOk = true;
+        if (task.decoy) {
+          await resetAndSeed(ts);
+          await task.decoy(ts);
+          const decoy = await task.check(ts);
+          decoyOk = !decoy.pass;
+          decoyDetail = `; decoy state: ${decoy.pass ? "PASSES (grader too lenient)" : `fails (${decoy.detail})`}`;
+        }
         lines.push({
-          ok: !before.pass && after.pass,
+          ok: !before.pass && after.pass && decoyOk,
           label: task.id,
-          detail: `fresh seed: ${before.pass ? "PASSES (not discriminative)" : `fails (${before.detail})`}; after reference: ${after.pass ? `passes (${after.detail})` : `FAILS (${after.detail})`}`,
+          detail: `fresh seed: ${before.pass ? "PASSES (not discriminative)" : `fails (${before.detail})`}; after reference: ${after.pass ? `passes (${after.detail})` : `FAILS (${after.detail})`}${decoyDetail}`,
         });
       }
     } catch (error) {

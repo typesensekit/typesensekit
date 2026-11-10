@@ -58,6 +58,11 @@ export type StateTask = TaskBase & {
    * task is actually done.
    */
   reference: (ts: TypesenseHttp) => Promise<void>;
+  /**
+   * Optional plausible-but-wrong end state, applied with direct HTTP. Only
+   * used by `--dry-run`, which asserts the check FAILS on it.
+   */
+  decoy?: (ts: TypesenseHttp) => Promise<void>;
 };
 
 export type Task = AnswerTask | StateTask;
@@ -99,7 +104,9 @@ export type FailureMode =
   | "max_turns"
   | "budget_exceeded"
   | "timeout"
-  | "agent_error";
+  | "agent_error"
+  /** The harness itself failed (seeding, oracle, session setup); not the agent. */
+  | "harness_error";
 
 export type AttemptRecord = {
   runId: string;

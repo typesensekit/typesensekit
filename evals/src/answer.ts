@@ -34,9 +34,14 @@ export function splitValues(value: string): string[] {
     .filter((part) => part.length > 0);
 }
 
+/**
+ * The answer's value when the WHOLE answer is a single number (after
+ * stripping wrappers, currency symbols, thousands separators, and
+ * whitespace). "50 or 49", "50/100", and "50e3" are not numbers here.
+ */
 export function parseNumber(value: string): number | null {
-  const match = value.replace(/[$€£,\s]/g, "").match(/-?\d+(?:\.\d+)?/);
-  return match ? Number(match[0]) : null;
+  const cleaned = normalize(value).replace(/[$€£,\s]/g, "");
+  return /^-?\d+(?:\.\d+)?$/.test(cleaned) ? Number(cleaned) : null;
 }
 
 export type Grade = { pass: boolean; detail: string };

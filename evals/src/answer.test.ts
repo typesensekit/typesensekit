@@ -54,6 +54,21 @@ describe("gradeAnswer", () => {
     expect(gradeAnswer("none", spec).pass).toBe(false);
   });
 
+  it("rejects answers that merely contain the number", () => {
+    const spec: AnswerSpec = { type: "number", value: 50 };
+    expect(gradeAnswer("50", spec).pass).toBe(true);
+    expect(gradeAnswer("**50**.", spec).pass).toBe(true);
+    for (const answer of [
+      "50 or 49",
+      "50/100",
+      "50e3",
+      "about 50",
+      "50 books",
+    ]) {
+      expect(gradeAnswer(answer, spec).pass).toBe(false);
+    }
+  });
+
   it("compares sets regardless of order but not size", () => {
     const spec: AnswerSpec = { type: "set", values: ["Furniture", "Audio"] };
     expect(gradeAnswer("audio, furniture", spec).pass).toBe(true);

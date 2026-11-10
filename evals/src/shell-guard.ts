@@ -2,6 +2,12 @@
  * Allowlist guard for the CLI arm's Bash tool. Runs as a PreToolUse hook, so
  * it applies regardless of permission mode.
  *
+ * This is a policy layer (keep the agent to the interface under test), not a
+ * security boundary: a lexical check cannot see through variable expansion.
+ * Containment comes from the Agent SDK's OS sandbox (see agent.ts), which
+ * restricts the Bash process's filesystem writes, sensitive reads, and
+ * network.
+ *
  * Allowed: pipelines and `&&`/`||`/`;` chains of allowlisted commands;
  * command and process substitution (`$(...)`, backticks, `<(...)`), whose
  * inner commands are checked recursively; heredocs and here-strings; and
@@ -38,7 +44,7 @@ const CLOSING_KEYWORDS = new Set(["done", "fi", "}", "break", "continue"]);
  * resolved, where the CLI connects, or what the shell loads.
  */
 const PROTECTED_VARIABLES =
-  /^(?:PATH|HOME|SHELL|ENV|BASH_ENV|IFS|CDPATH|PROMPT_COMMAND|TYPESENSE_\w*|LD_\w*|DYLD_\w*)$/;
+  /^(?:PATH|HOME|SHELL|ENV|IFS|CDPATH|PROMPT_COMMAND|TYPESENSE_\w*|LD_\w*|DYLD_\w*|BASH\w*|NODE_\w*|NPM_\w*|npm_\w*|PYTHON\w*|PERL\w*|RUBY\w*|\w*_OPTIONS)$/;
 
 export type GuardOptions = {
   /**
@@ -49,6 +55,15 @@ export type GuardOptions = {
 };
 
 type Parsed = { segments: string[][] } | { error: string };
+
+/** Absolute, home-relative, or parent-relative (`..`) path syntax. */
+function looksLikePath(value: string): boolean {
+  return (
+    value.startsWith("/") ||
+    value.startsWith("~") ||
+    value.split("/").includes("..")
+  );
+}
 
 /** True for a path that stays inside the working directory. */
 function isSandboxPath(path: string, options: GuardOptions): boolean {
@@ -92,7 +107,7 @@ function parse(
   let word = "";
   let inWord = false;
   let quote: "'" | '"' | null = null;
-  const heredocs: string[] = [];
+  const heredocs: { delimiter: string; expands: boolean }[] = [];
 
   const endWord = () => {
     if (inWord) words.push(word);
@@ -171,7 +186,7 @@ function parse(
     if (char === "\n") {
       endSegment();
       // Skip heredoc bodies that start after this line.
-      for (const delimiter of heredocs.splice(0)) {
+      for (const { delimiter, expands } of heredocs.splice(0)) {
         let lineStart = i + 1;
         for (;;) {
           const lineEnd = command.indexOf("\n", lineStart);
@@ -182,6 +197,12 @@ function parse(
           if (line.replace(/^\t+/, "") === delimiter) {
             i = lineEnd < 0 ? command.length : lineEnd;
             break;
+          }
+          // An unquoted delimiter means Bash runs substitutions in the body.
+          if (expands && (line.includes("$(") || line.includes("`"))) {
+            return {
+              error: `command substitution inside an unquoted heredoc (quote the delimiter: <<'${delimiter}')`,
+            };
           }
           if (lineEnd < 0)
             return { error: `unterminated heredoc (${delimiter})` };
@@ -239,9 +260,10 @@ function parse(
         delimiter += command[j];
         j++;
       }
-      delimiter = delimiter.replace(/^['"]|['"]$/g, "");
+      const quoted = /['"\\]/.test(delimiter);
+      delimiter = delimiter.replace(/['"\\]/g, "");
       if (!delimiter) return { error: "heredoc without delimiter" };
-      heredocs.push(delimiter);
+      heredocs.push({ delimiter, expands: !quoted });
       i = j - 1;
       continue;
     }
@@ -274,6 +296,9 @@ function parse(
         else if (/[\s|;&<>()]/.test(c)) break;
         else target += c;
         j++;
+      }
+      if (/[$`]/.test(target)) {
+        return { error: `expansion in redirection target "${target}"` };
       }
       if (!isSandboxPath(target, options)) {
         return {
@@ -340,6 +365,15 @@ export function checkShellCommand(
             reason: `Blocked by sandbox: setting ${assignment[1]} is not allowed.`,
           };
         }
+        const value = (segment[firstCommand] as string).slice(
+          (assignment[0] as string).length,
+        );
+        if (looksLikePath(value) && !isSandboxPath(value, options)) {
+          return {
+            allowed: false,
+            reason: `Blocked by sandbox: file paths outside the working directory ("${value}") are not allowed.`,
+          };
+        }
         firstCommand++;
       }
     }
@@ -354,9 +388,7 @@ export function checkShellCommand(
       };
     }
     for (const arg of args) {
-      const pathLike =
-        arg.startsWith("/") || arg.startsWith("~") || arg.includes("../");
-      if (pathLike && !isSandboxPath(arg, options)) {
+      if (looksLikePath(arg) && !isSandboxPath(arg, options)) {
         return {
           allowed: false,
           reason: `Blocked by sandbox: file paths outside the working directory ("${arg}") are not allowed.`,

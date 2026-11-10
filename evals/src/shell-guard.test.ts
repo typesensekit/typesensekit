@@ -119,6 +119,22 @@ describe("checkShellCommand", () => {
     blocked("tsk health &", /background/);
   });
 
+  it("closes the bypasses found in review", () => {
+    blocked("cat <<EOF\n$(node -e 1)\nEOF", /unquoted heredoc/);
+    blocked("cat <<EOF\n`node -e 1`\nEOF", /unquoted heredoc/);
+    ok("cat > q.json <<'EOF'\n$(not run)\nEOF");
+    blocked('cat <"$(node -e 1)"', /expansion in redirection target/);
+    blocked("tsk health > $OUT", /expansion in redirection target/);
+    blocked(
+      "NODE_OPTIONS=--require=./p.cjs tsk health",
+      /setting NODE_OPTIONS/,
+    );
+    blocked("BASH_ENV=./x tsk health", /setting BASH_ENV/);
+    blocked("cat ..", /outside the working directory/);
+    blocked("p=/etc/passwd; cat $p", /outside the working directory/);
+    blocked("p=../../x; cat $p", /outside the working directory/);
+  });
+
   it("rejects malformed input", () => {
     blocked("tsk search --input '{", /unterminated quote/);
     blocked("cat <<EOF\nno end", /unterminated heredoc/);
