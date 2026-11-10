@@ -10,6 +10,7 @@ vi.mock("./profile/resolve.js", () => ({
           ? '{"id":"1"}\n{"id":"2"}\n'
           : { name: path },
       ),
+      delete: vi.fn(async (path: string) => ({ deleted: path })),
       post: vi.fn(async () => ({
         value: "generated-key",
         actions: ["documents:search"],
@@ -87,4 +88,23 @@ it("adds raw JSONL and array exports while preserving the existing JSON string",
     { id: "1" },
     { id: "2" },
   ]);
+});
+
+it("treats yes: true in --input JSON as confirmation", async () => {
+  const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  const command = operationCommands()["documents.delete"];
+  if (!command) throw new Error("Missing command");
+  await expect(
+    runCommand(command, { rawArgs: ["products", "p1", "--json"] }),
+  ).rejects.toThrow("Pass --yes");
+  await runCommand(command, {
+    rawArgs: [
+      "--input",
+      '{"collection":"products","id":"p1","yes":true}',
+      "--json",
+    ],
+  });
+  expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toEqual({
+    deleted: "/collections/products/documents/p1",
+  });
 });

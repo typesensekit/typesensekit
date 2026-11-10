@@ -71,6 +71,19 @@ example; `--schema` still prints the complete JSON schema. Required string input
 fields can also be positional, for example `tsk collections.retrieve products
 --json`. Explicit `--input` values take precedence over positional values.
 
+Every input field can also be a flag (`tsk documents get_many --collection
+books --ids b1,b2`). For `search`, `documents.search`, and `documents.export`,
+other flags are passed through as Typesense parameters, and `q` defaults to `*`:
+
+```sh
+tsk search products --filter-by 'price:<100 && in_stock:=true' --sort-by price:asc --per-page 5 --compact --json
+tsk search products --facet-by brand --max-facet-values 250 --per-page 0 --compact --json
+tsk collections list --compact     # doc counts, aliases, fields with facet/sort flags
+```
+
+Flat `--input` keys work too: `{"collection":"products","filter_by":"price:<100"}`
+is read as `{"collection":"products","params":{"q":"*","filter_by":"price:<100"}}`.
+
 Export keeps its existing JSON string output, including with `--json`. For direct
 shell processing, select an explicit format:
 

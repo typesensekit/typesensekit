@@ -1,11 +1,18 @@
-import { operations, redactSecrets } from "@typesensekit/core";
+import {
+  operationDescription,
+  operations,
+  redactSecrets,
+} from "@typesensekit/core";
 import { type CommandDef, runCommand, runMain } from "citty";
 import {
   inputObjectSchema,
+  type JsonSchemaLike,
   renderOperationExamples,
 } from "./operation-docs.js";
+import { operationSpecificArgs, positionalKeys } from "./operations.js";
+import { QUICK_START } from "./quick-start.js";
 
-import { operationSpecificArgs } from "./operations.js";
+export { QUICK_START };
 
 const names = new Set(operations.map((operation) => operation.name));
 const BUILTIN_COMMANDS = ["operations", "profile", "skills", "completion"];
@@ -21,37 +28,94 @@ export function normalizeCommand(argv: string[]): string[] {
   return [argv.slice(0, best).join("."), ...argv.slice(best)];
 }
 
+function describeProperty(
+  key: string,
+  value: JsonSchemaLike,
+  required: boolean,
+  positional: boolean,
+): string {
+  const type = Array.isArray(value.type)
+    ? value.type.join("|")
+    : (value.type ??
+      (value.anyOf
+        ?.map((entry) => entry.type)
+        .filter(Boolean)
+        .join("|") ||
+        "value"));
+  const tags = [
+    type,
+    required ? "required" : "",
+    positional ? "positional" : "",
+  ].filter(Boolean);
+  return `  ${key} (${tags.join(", ")})${value.description ? `: ${value.description}` : ""}`;
+}
+
 export function operationHelp(name: string): string {
   const operation = operations.find((entry) => entry.name === name);
   if (!operation) throw new Error(`Unknown operation: ${name}`);
   const schema = inputObjectSchema(operation.input);
-  return [
+  const properties = Object.entries(schema.properties ?? {});
+  const positional = positionalKeys(name);
+  const command = name.replaceAll(".", " ");
+  const isSearch = name === "search" || name === "documents.search";
+  const description = operationDescription(operation);
+  const lines = [
     `${name}: ${operation.summary}`,
-    `Usage: tsk ${name} --input '<JSON or file path>' --json`,
-    `Input: ${
-      Object.entries(schema.properties ?? {})
-        .map(
-          ([key, value]) =>
-            `${key}${schema.required?.includes(key) ? " (required)" : ""}: ${value.type ?? "value"}`,
-        )
-        .join(", ") || "{}"
+    ...(description !== operation.summary ? [description] : []),
+    `Usage: tsk ${command}${positional.map((key) => ` <${key}>`).join("")}${
+      isSearch
+        ? " [--<search param> value ...] [--compact] [--json]"
+        : properties.some(([key]) => !positional.includes(key))
+          ? " [--<field> value ...] [--json]"
+          : " [--json]"
     }`,
+    `   or: tsk ${name} --input '<JSON or file path>' --json`,
+    "Inputs:",
+    ...(properties.length
+      ? properties.map(([key, value]) =>
+          describeProperty(
+            key,
+            value,
+            schema.required?.includes(key) ?? false,
+            positional.includes(key),
+          ),
+        )
+      : ["  (none)"]),
+  ];
+  if (isSearch) {
+    const params = Object.entries(
+      schema.properties?.params?.properties ?? {},
+    ).map(
+      ([key, value]) =>
+        `  --${key.replaceAll("_", "-")}: ${value.description ?? ""}`,
+    );
+    lines.push(
+      "Search params (as flags, or inside params in --input JSON; any other Typesense param also works):",
+      ...params,
+      "Examples:",
+      `tsk ${command} products --filter-by 'category:=Audio && price:<100' --per-page 0 --json   (count: read found)`,
+      `tsk ${command} products --facet-by brand --max-facet-values 250 --per-page 0 --compact --json`,
+      `tsk ${command} products --q chair --query-by name,description --sort-by price:asc --per-page 3 --include-fields id,name,price --compact --json`,
+    );
+  } else {
+    lines.push("Examples:");
+  }
+  lines.push(
     renderOperationExamples(name, operation.input),
-    "Flags: --schema (full input schema), --examples, --json, --profile NAME, --config PATH, --yes, --debug",
+    "Flags: --schema (full input schema), --examples, --json, --yes (confirm destructive), --profile NAME, --config PATH, --debug",
     ...Object.entries(operationSpecificArgs(name)).map(
       ([flag, definition]) => `--${flag}: ${definition.description ?? ""}`,
     ),
-    ...(name === "documents.export"
-      ? [
-          "Export output is a JSON string containing JSONL. Use --format jsonl for raw lines or --format array for a JSON array; default/--json stays unchanged.",
-        ]
-      : []),
-    ...(name === "search" || name === "documents.search"
-      ? [
-          "Put Typesense search options inside params: q, query_by, filter_by, sort_by, facet_by, per_page, page. Search returns 10 hits/page and 10 facet values by default; set per_page and max_facet_values as needed.",
-        ]
-      : []),
-  ].join("\n");
+  );
+  if (name === "collections.list" || name === "collections.retrieve")
+    lines.push(
+      "--compact: short overview with doc counts, aliases, and fields with type and facet/sort flags (one-line JSON with --json).",
+    );
+  if (name === "documents.export")
+    lines.push(
+      "--format jsonl prints one document per line; --format array prints a JSON array. Default/--json output is a JSON string containing JSONL. Extra flags such as --filter-by and --include-fields become export params.",
+    );
+  return lines.join("\n");
 }
 
 export function groupHelp(prefix = ""): string {
@@ -64,18 +128,15 @@ export function groupHelp(prefix = ""): string {
       ...matches.map(
         (operation) => `  ${operation.name}\t${operation.summary}`,
       ),
-      "Use tsk <operation> --help for input fields and an example.",
+      "Use tsk <operation> --help for inputs, flags and examples.",
+      ...(prefix === "collections"
+        ? ["Overview of every collection: tsk collections list --compact"]
+        : []),
     ].join("\n");
   return [
-    "tsk — Typesense CLI",
-    "Usage: tsk <operation> --input '<JSON or file path>' --json",
-    "Example: tsk collections.list --json",
-    'Example: tsk collections.retrieve --input \'{"collection":"products"}\' --json',
-    "Dotted and grouped commands both work: tsk collections list --json",
-    `Groups: ${[...new Set(operations.map((operation) => operation.name.split(".")[0]))].join(", ")}`,
-    "Discovery: tsk operations | tsk <group> --help | tsk <operation> --help",
-    "Details: tsk <operation> --schema or --examples",
-    "Other commands: profile, skills, completion. Use --help on each.",
+    QUICK_START,
+    `# Groups: ${[...new Set(operations.map((operation) => operation.name.split(".")[0]))].join(", ")}`,
+    "# Other commands: tsk operations (list all operations), profile, skills, completion.",
   ].join("\n");
 }
 

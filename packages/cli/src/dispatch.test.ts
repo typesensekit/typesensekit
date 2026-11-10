@@ -38,7 +38,7 @@ it("shows focused help with usable inputs and output format instructions", () =>
   expect(operationHelp("search")).toContain('"params":');
   expect(operationHelp("documents.export")).toContain("--format jsonl");
   expect(operationHelp("collections.retrieve")).toContain(
-    "collection (required)",
+    "collection (string, required, positional)",
   );
 });
 
