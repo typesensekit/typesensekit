@@ -45,3 +45,10 @@ pnpm --filter @typesensekit/mcp test:live
 This checks CLI import/export and search, batch ordering, schema confirmation,
 scoped keys, explicit profiles, stdio MCP, and authenticated HTTP tools/resources.
 Stop and remove the disposable containers after testing.
+
+## Agent evals
+
+`evals/` holds an on-demand benchmark that measures how well Claude agents
+complete Typesense tasks through the MCP server and the CLI. It costs API
+credits, so it is not part of `pnpm check` or CI. `pnpm eval --dry-run`
+validates it for free with Docker. See `evals/README.md`.
