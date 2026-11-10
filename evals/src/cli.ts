@@ -26,10 +26,12 @@ import {
   missingRequirements,
   resolveInterfaces,
 } from "./interfaces.js";
+import { analyzeTranscript, type TranscriptMessage } from "./metrics.js";
 import { EVALS_ROOT, REPO_ROOT } from "./paths.js";
 import { buildSummary, type RunMeta, renderMarkdown } from "./report.js";
-import { runAttempt } from "./runner.js";
+import { attemptMetrics, runAttempt } from "./runner.js";
 import type { AttemptRecord, Task } from "./types.js";
+import { TypesenseHttp } from "./typesense.js";
 
 export const DEFAULT_MODELS = [
   "claude-haiku-5-5",
@@ -74,6 +76,8 @@ Modes
       --inspect           print tool-surface stats for each interface; no model calls
       --list              list tasks and interfaces
       --report <dir>      rebuild summary.{md,json} from <dir>/attempts.jsonl
+      --reanalyze         with --report: recompute tool metrics from the saved
+                          transcripts with the current metrics code
   -y, --yes               skip the confirmation for runs over 30 attempts
       --results <dir>     default evals/results
   -h, --help
@@ -100,6 +104,7 @@ function parse() {
       inspect: { type: "boolean", default: false },
       list: { type: "boolean", default: false },
       report: { type: "string" },
+      reanalyze: { type: "boolean", default: false },
       yes: { type: "boolean", short: "y", default: false },
       results: { type: "string", default: join(EVALS_ROOT, "results") },
       help: { type: "boolean", short: "h", default: false },
@@ -206,12 +211,13 @@ function writeReport(runDir: string, meta: RunMeta, attempts: AttemptRecord[]) {
 const userPath = (path: string) =>
   resolve(process.env.INIT_CWD ?? process.cwd(), path);
 
-function reportCommand(dir: string) {
+async function reportCommand(dir: string, reanalyze: boolean) {
   const runDir = userPath(dir);
-  const attempts = readFileSync(join(runDir, "attempts.jsonl"), "utf8")
+  let attempts = readFileSync(join(runDir, "attempts.jsonl"), "utf8")
     .split("\n")
     .filter((line) => line.trim())
     .map((line) => JSON.parse(line) as AttemptRecord);
+  if (reanalyze) attempts = await reanalyzeAttempts(runDir, attempts);
   const metaPath = join(runDir, "meta.json");
   const meta = existsSync(metaPath)
     ? (JSON.parse(readFileSync(metaPath, "utf8")) as RunMeta)
@@ -228,6 +234,43 @@ function reportCommand(dir: string) {
       } satisfies RunMeta);
   writeReport(runDir, meta, attempts);
   console.log(`Wrote ${join(runDir, "summary.md")}`);
+}
+
+/**
+ * Recomputes tool-call metrics from transcripts with the current metrics
+ * code, so runs recorded with older metric logic stay comparable. Writes
+ * attempts.reanalyzed.jsonl and leaves attempts.jsonl untouched.
+ */
+async function reanalyzeAttempts(
+  runDir: string,
+  attempts: AttemptRecord[],
+): Promise<AttemptRecord[]> {
+  const configs = new Map(listInterfaces().map((c) => [c.name, c]));
+  const offline = new TypesenseHttp("http://127.0.0.1:9", "unused");
+  for (const config of configs.values()) {
+    if (config.kind === "cli" && config.opsListCommand && !config.validOps) {
+      config.validOps = await loadCliOps(config, offline);
+    }
+  }
+  const updated = attempts.map((attempt) => {
+    const config = configs.get(attempt.interface);
+    if (!config || !existsSync(attempt.transcriptPath)) return attempt;
+    const messages = readFileSync(attempt.transcriptPath, "utf8")
+      .split("\n")
+      .filter((line) => line.trim())
+      .map((line) => JSON.parse(line) as TranscriptMessage)
+      .filter((message) => !message.type.startsWith("eval_"));
+    return {
+      ...attempt,
+      ...attemptMetrics(analyzeTranscript(messages, config)),
+    };
+  });
+  writeFileSync(
+    join(runDir, "attempts.reanalyzed.jsonl"),
+    updated.map((a) => JSON.stringify(a)).join("\n") + "\n",
+  );
+  console.log(`Reanalyzed ${updated.length} attempts from transcripts.`);
+  return updated;
 }
 
 async function dryRunCommand(
@@ -455,7 +498,7 @@ async function main() {
     return;
   }
   if (args.list) return listCommand();
-  if (args.report) return reportCommand(args.report);
+  if (args.report) return reportCommand(args.report, args.reanalyze);
   const configs = resolveInterfaces(args.interface);
   const tasks = selectTasks(args.tasks);
   if (tasks.length === 0) throw new Error(`No tasks match "${args.tasks}"`);

@@ -7,10 +7,58 @@ import type {
 import { type AgentSettings, startAgent } from "./agent.js";
 import { extractFinalAnswer, type Grade, gradeAnswer } from "./answer.js";
 import type { InterfaceConfig } from "./interfaces.js";
-import { analyzeTranscript, type TranscriptMessage } from "./metrics.js";
+import {
+  analyzeTranscript,
+  type TranscriptAnalysis,
+  type TranscriptMessage,
+} from "./metrics.js";
 import { resetAndSeed } from "./seed.js";
 import type { AnswerSpec, AttemptRecord, FailureMode, Task } from "./types.js";
 import type { TypesenseHttp } from "./typesense.js";
+
+/** Tool-call metrics of an attempt; shared by live runs and `--reanalyze`. */
+export function attemptMetrics(
+  analysis: TranscriptAnalysis,
+): Pick<
+  AttemptRecord,
+  | "toolCalls"
+  | "discoveryCalls"
+  | "toolErrors"
+  | "errorsByKind"
+  | "duplicateCalls"
+  | "unknownOpCalls"
+  | "alternateToolMixes"
+  | "opsUsed"
+  | "errorSamples"
+> {
+  return {
+    toolCalls: analysis.calls.length,
+    discoveryCalls: analysis.calls.filter((call) => call.discovery).length,
+    toolErrors: analysis.calls.filter((call) => call.isError).length,
+    errorsByKind: analysis.errorsByKind,
+    duplicateCalls: analysis.duplicateCalls,
+    unknownOpCalls: analysis.unknownOpCalls,
+    alternateToolMixes: analysis.alternateToolMixes,
+    opsUsed: analysis.opsUsed,
+    errorSamples: analysis.calls
+      .filter((call) => call.isError)
+      .slice(0, 8)
+      .map((call) => ({
+        op:
+          call.ops[0] ??
+          (call.unknownOps[0]
+            ? `${call.unknownOps[0]} (nonexistent)`
+            : call.tool),
+        kind: call.errorKind ?? "other",
+        // Skip the Bash "Exit code N" header so the sample shows the message.
+        text:
+          call.resultPreview
+            .split("\n")
+            .find((line) => line.trim() && !/^Exit code \d+\s*$/.test(line))
+            ?.slice(0, 200) ?? "",
+      })),
+  };
+}
 
 export async function resolveExpected(
   task: Task & { kind: "answer" },
@@ -141,7 +189,6 @@ export async function runAttempt(params: {
     config,
   );
   const usage = result?.usage;
-  const toolErrors = analysis.calls.filter((call) => call.isError).length;
   return {
     runId: params.runId,
     interface: config.name,
@@ -159,31 +206,7 @@ export async function runAttempt(params: {
       result?.num_turns ??
       messages.filter((m) => m.type === "assistant").length,
     toolsAvailable,
-    toolCalls: analysis.calls.length,
-    discoveryCalls: analysis.calls.filter((call) => call.discovery).length,
-    toolErrors,
-    errorsByKind: analysis.errorsByKind,
-    duplicateCalls: analysis.duplicateCalls,
-    unknownOpCalls: analysis.unknownOpCalls,
-    alternateToolMixes: analysis.alternateToolMixes,
-    opsUsed: analysis.opsUsed,
-    errorSamples: analysis.calls
-      .filter((call) => call.isError)
-      .slice(0, 8)
-      .map((call) => ({
-        op:
-          call.ops[0] ??
-          (call.unknownOps[0]
-            ? `${call.unknownOps[0]} (nonexistent)`
-            : call.tool),
-        kind: call.errorKind ?? "other",
-        // Skip the Bash "Exit code N" header so the sample shows the message.
-        text:
-          call.resultPreview
-            .split("\n")
-            .find((line) => line.trim() && !/^Exit code \d+\s*$/.test(line))
-            ?.slice(0, 200) ?? "",
-      })),
+    ...attemptMetrics(analysis),
     inputTokens: usage?.input_tokens ?? 0,
     cacheReadTokens: usage?.cache_read_input_tokens ?? 0,
     cacheCreationTokens: usage?.cache_creation_input_tokens ?? 0,

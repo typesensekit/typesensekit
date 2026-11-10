@@ -150,9 +150,26 @@ export function opsForCall(
       if (!(program in config.commands)) continue;
       interfaceSegments++;
       const match = opPattern?.exec(segment);
-      const op = match?.[1] ? canonicalOp(match[1]) : undefined;
-      // A guessed op that does not exist is a wrong tool choice, even in a
-      // --help/--schema call.
+      let op = match?.[1] ? canonicalOp(match[1]) : undefined;
+      // Space-separated forms (`tsk collections list`) resolve to the
+      // longest valid op, for CLIs that accept them.
+      if (op && known && !known.has(op)) {
+        const words = segment.split(/\s+/).slice(1);
+        const bare: string[] = [];
+        for (const word of words) {
+          if (!/^[A-Za-z][\w.-]*$/.test(word)) break;
+          bare.push(word);
+        }
+        for (let size = bare.length; size > 1; size--) {
+          const candidate = canonicalOp(bare.slice(0, size).join("."));
+          if (known.has(candidate)) {
+            op = candidate;
+            break;
+          }
+        }
+      }
+      // A token that is not a valid op (even in a --help call). Counted as a
+      // wrong guess only if the call failed; see analyzeTranscript.
       if (op && known && !known.has(op)) unknownOps.push(op);
       if (discoveryPattern?.test(segment)) {
         discoverySegments++;
@@ -218,16 +235,16 @@ export function analyzeTranscript(
     const use = uses.get(id) as ToolUseBlock;
     const result = results.get(id);
     const text = resultText(result?.content);
-    const { ops, unknownOps, discovery } = opsForCall(
-      use.name,
-      use.input,
-      config,
-    );
+    const call = opsForCall(use.name, use.input, config);
+    const { ops, discovery } = call;
+    const isError = result?.is_error === true;
+    // An unrecognized token the interface accepted (e.g. group help) is not
+    // a wrong guess; only rejected ones count.
+    const unknownOps = isError ? call.unknownOps : [];
     const key = `${use.name}:${stableStringify(use.input)}`;
     if (seen.has(key)) duplicateCalls++;
     seen.add(key);
     for (const op of ops) opsUsed[op] = (opsUsed[op] ?? 0) + 1;
-    const isError = result?.is_error === true;
     const errorKind = isError
       ? unknownOps.length > 0
         ? "unknown_tool"

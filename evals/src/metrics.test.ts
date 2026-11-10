@@ -138,12 +138,12 @@ describe("opsForCall", () => {
     expect(
       opsForCall(
         "Bash",
-        { command: "tsk collections retrieve books | jq . && tsk operations" },
+        { command: "tsk collection get books | jq . && tsk operations" },
         known,
       ),
     ).toEqual({
       ops: [],
-      unknownOps: ["collections"],
+      unknownOps: ["collection"],
       discovery: false,
     });
     expect(opsForCall("Bash", { command: "tsk alias --help" }, known)).toEqual({
@@ -186,7 +186,7 @@ describe("analyzeTranscript", () => {
     const known = { ...cli, validOps: ["collections.retrieve"] };
     const analysis = analyzeTranscript(
       [
-        use("1", "Bash", { command: "tsk collections retrieve books" }),
+        use("1", "Bash", { command: "tsk collection get books" }),
         result(
           "1",
           "Exit code 1\nCLI for Typesense Admin API operations",
@@ -198,6 +198,24 @@ describe("analyzeTranscript", () => {
     expect(analysis.unknownOpCalls).toBe(1);
     expect(analysis.errorsByKind.unknown_tool).toBe(1);
     expect(analysis.opsUsed).toEqual({});
+  });
+
+  it("resolves space-separated CLI ops and ignores accepted guesses", () => {
+    const known = {
+      ...cli,
+      validOps: ["collections.list", "collections.retrieve"],
+    };
+    expect(
+      opsForCall("Bash", { command: "tsk collections list --json" }, known),
+    ).toEqual({ ops: ["collections_list"], unknownOps: [], discovery: false });
+    const analysis = analyzeTranscript(
+      [
+        use("1", "Bash", { command: "tsk collections --help" }),
+        result("1", "collections operations: ..."),
+      ],
+      known,
+    );
+    expect(analysis.unknownOpCalls).toBe(0);
   });
 
   it("ignores subagent messages", () => {
