@@ -21,7 +21,20 @@
     "cut",
     "tr",
     "echo",
-    "printf"
+    "printf",
+    "cat",
+    "ls",
+    "mkdir",
+    "cp",
+    "mv",
+    "cd",
+    "read",
+    "test",
+    "[",
+    "true",
+    "false",
+    "sleep",
+    "seq"
   ],
   "env": {
     "TYPESENSE_URL": "${TYPESENSE_URL}",
@@ -36,7 +49,7 @@
       "env": {}
     }
   },
-  "promptHint": "You have a Bash shell. The `tsk` command is a Typesense CLI that is already configured to talk to the cluster. Discover its usage with `tsk operations`, `tsk <operation> --help`, `tsk <operation> --schema`, and `tsk <operation> --examples`. Besides `tsk`, only basic text tools (jq, head, tail, grep, wc, sort, uniq, cut, tr, echo, printf) are available.",
+  "promptHint": "You have a Bash shell. The `tsk` command is a Typesense CLI that is already configured to talk to the cluster. Discover its usage with `tsk operations`, `tsk <operation> --help`, `tsk <operation> --schema`, and `tsk <operation> --examples`. Besides `tsk`, only basic text tools and shell utilities (jq, head, tail, grep, wc, sort, uniq, cut, tr, echo, printf, cat, ls, mkdir, cp, mv, sleep, seq, plus loops and conditionals) are available. You can read and write files in the current working directory.",
   "opPattern": "^tsk\\s+([A-Za-z0-9_.-]+)",
   "discoveryPattern": "(--help|--schema|--examples|^tsk\\s+operations\\b|^tsk\\s*$|^tsk\\s+-h\\b)",
   "opsListCommand": ["operations"],

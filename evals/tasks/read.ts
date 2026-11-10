@@ -1,13 +1,22 @@
 /**
  * Read-only answer tasks. Run with every interface's read-only mode.
- * Prompts never name an interface, tool, or command.
+ *
+ * Prompts are phrased the way a user would ask: "our catalog" (the `catalog`
+ * alias → products), "the library" (`library` → books), "the help center"
+ * (`help_center` → support_articles). They never name a tool or command,
+ * and avoid naming fields where a user would not know them.
+ *
+ * Trap tasks (marked TRAP) have a plausible-looking wrong answer that falls
+ * out of Typesense defaults: 10 hits per page, 10 facet values, synonyms,
+ * curation pins, or unescaped filter values.
  */
 import {
-  articles,
+  type Book,
   books,
   list,
   nthMostCommon,
   number,
+  type Product,
   products,
   set,
   text,
@@ -18,24 +27,27 @@ import type { AnswerTask } from "../src/types.js";
 
 type ReadTask = Omit<AnswerTask, "kind" | "mode">;
 
+const hasWord = (value: string, word: string) =>
+  new RegExp(`\\b${word}\\b`, "i").test(value);
+
 const discovery: ReadTask[] = [
   {
     id: "discovery.list-collections",
     category: "discovery",
     difficulty: "easy",
     prompt:
-      "Which collections exist on this Typesense cluster? List their names.",
+      "What collections exist on our search cluster? List their names (not aliases).",
     expected: async (ts) =>
       set(
         (await ts.get<{ name: string }[]>("/collections")).map((c) => c.name),
       ),
-    decoy: "products, books, catalog",
+    decoy: "catalog, library, help_center",
   },
   {
     id: "discovery.count-books",
     category: "discovery",
     difficulty: "easy",
-    prompt: "How many documents does the books collection contain?",
+    prompt: "How many books are in the library?",
     expected: async (ts) =>
       number(
         (await ts.get<{ num_documents: number }>("/collections/books"))
@@ -48,7 +60,7 @@ const discovery: ReadTask[] = [
     category: "discovery",
     difficulty: "medium",
     prompt:
-      "Which fields in the products collection are facetable? List the field names.",
+      "Which product attributes in our catalog can be used as facets? List the field names.",
     expected: async (ts) =>
       set(
         (
@@ -62,20 +74,11 @@ const discovery: ReadTask[] = [
     decoy: "brand, category",
   },
   {
-    id: "discovery.field-type",
-    category: "discovery",
-    difficulty: "easy",
-    prompt:
-      "What is the data type of the `pages` field in the books collection?",
-    expected: text("int32"),
-    decoy: "int64",
-  },
-  {
     id: "discovery.default-sorting-field",
     category: "discovery",
     difficulty: "medium",
     prompt:
-      "Which field is the default sorting field of the products collection?",
+      "When someone browses our catalog without choosing a sort order, which field are results ordered by? Give the field name.",
     expected: async (ts) =>
       text(
         (
@@ -93,21 +96,20 @@ const search: ReadTask[] = [
     id: "search.audio-under-100",
     category: "search",
     difficulty: "easy",
-    prompt: "How many products in the Audio category cost less than 100?",
+    prompt: "How many audio products in our catalog cost less than $100?",
     expected: async (ts) =>
       number(
         (await products(ts)).filter(
           (p) => p.category === "Audio" && p.price < 100,
         ).length,
       ),
-    decoy: "12",
+    decoy: "10",
   },
   {
     id: "search.top-rated-book-by-author",
     category: "search",
     difficulty: "medium",
-    prompt:
-      "What is the title of the highest-rated book written by Corwin Hale?",
+    prompt: "What's the highest-rated book by Corwin Hale in the library?",
     expected: async (ts) =>
       text(
         uniqueMax(
@@ -122,7 +124,7 @@ const search: ReadTask[] = [
     id: "search.find-by-name",
     category: "search",
     difficulty: "easy",
-    prompt: 'What is the id of the product named "Linden Sectional Sofa"?',
+    prompt: "What's the product id of the Linden Sectional Sofa?",
     expected: async (ts) => {
       const match = (await products(ts)).filter(
         (p) => p.name === "Linden Sectional Sofa",
@@ -138,7 +140,7 @@ const search: ReadTask[] = [
     category: "search",
     difficulty: "medium",
     prompt:
-      "List the titles of all Science Fiction books in the books collection that were published before 1950.",
+      "Which science fiction books in the library were published before 1950? List the titles.",
     expected: async (ts) =>
       set(
         (await books(ts))
@@ -152,7 +154,7 @@ const search: ReadTask[] = [
     category: "search",
     difficulty: "medium",
     prompt:
-      "What is the name of the cheapest in-stock product from the brand Halcyon?",
+      "What's the cheapest Halcyon product we currently have in stock? Give its name.",
     expected: async (ts) =>
       text(
         uniqueMin(
@@ -163,28 +165,14 @@ const search: ReadTask[] = [
           "cheapest in-stock Halcyon",
         ).name,
       ),
-    decoy: "Harbor Chef Knife",
-  },
-  {
-    id: "search.rating-price-window",
-    category: "search",
-    difficulty: "medium",
-    prompt:
-      "List the ids of all products with a rating of at least 4.5 and a price between 50 and 150 inclusive.",
-    expected: async (ts) =>
-      set(
-        (await products(ts))
-          .filter((p) => p.rating >= 4.5 && p.price >= 50 && p.price <= 150)
-          .map((p) => p.id),
-      ),
-    decoy: "p025",
+    decoy: "Sable Espresso Grinder",
   },
   {
     id: "search.third-most-expensive-furniture",
     category: "search",
     difficulty: "medium",
     prompt:
-      "What is the name of the third most expensive product in the Furniture category?",
+      "What's the third most expensive piece of furniture we sell? Give its name.",
     expected: async (ts) => {
       const sorted = (await products(ts))
         .filter((p) => p.category === "Furniture")
@@ -197,14 +185,14 @@ const search: ReadTask[] = [
       }
       return text(sorted[2]?.name ?? "");
     },
-    decoy: "Quill Coffee Table",
+    decoy: "Dune Ottoman",
   },
   {
     id: "search.lighthouse-author",
     category: "search",
     difficulty: "easy",
     prompt:
-      "Who wrote the book whose title contains the word Lighthouse and that was published in 1972?",
+      "Who wrote the book in the library that has Lighthouse in its title and came out in 1972?",
     expected: async (ts) => {
       const match = (await books(ts)).filter(
         (b) => b.title.includes("Lighthouse") && b.year === 1972,
@@ -215,6 +203,76 @@ const search: ReadTask[] = [
     },
     decoy: "Anouk Delacroix",
   },
+  {
+    // TRAP: a curation rule pins p010 to the top of "sofa" searches, even
+    // when sorting by price.
+    id: "search.cheapest-sofa",
+    category: "search",
+    difficulty: "hard",
+    prompt: "What's the cheapest sofa we sell? Give its product id.",
+    expected: async (ts) =>
+      text(
+        uniqueMin(
+          (await products(ts)).filter((p) => hasWord(p.name, "sofa")),
+          (p) => p.price,
+          "cheapest sofa",
+        ).id,
+      ),
+    decoy: "p010",
+  },
+  {
+    // TRAP: the catalog's synonym set maps lamp <-> light, so a plain
+    // search for "lamp" also counts lights.
+    id: "search.lamp-name-count",
+    category: "search",
+    difficulty: "hard",
+    prompt:
+      "How many products in our catalog have the word lamp in their name? Lights and LED strips don't count.",
+    expected: async (ts) =>
+      number(
+        (await products(ts)).filter((p) => hasWord(p.name, "lamp")).length,
+      ),
+    decoy: "0",
+  },
+  {
+    // TRAP: more than 10 matches, so the default page size truncates.
+    id: "search.list-many-ids",
+    category: "search",
+    difficulty: "hard",
+    prompt:
+      "List the product ids of every in-stock Lumen lighting product that costs under $100.",
+    expected: async (ts) => {
+      const ids = (await products(ts))
+        .filter(
+          (p) =>
+            p.brand === "Lumen" &&
+            p.category === "Lighting" &&
+            p.in_stock &&
+            p.price < 100,
+        )
+        .map((p) => p.id);
+      if (ids.length <= 10 || ids.length > 60) {
+        throw new Error(`premise: want 11-60 matches, got ${ids.length}`);
+      }
+      return set(ids);
+    },
+    decoy: "p029",
+  },
+  {
+    // TRAP: "Fox & Finch" must be quoted in filter_by, and the brand is too
+    // small to appear among the default 10 facet values.
+    id: "search.fox-and-finch-in-stock",
+    category: "search",
+    difficulty: "hard",
+    prompt: "How many in-stock products does the brand Fox & Finch have?",
+    expected: async (ts) =>
+      number(
+        (await products(ts)).filter(
+          (p) => p.brand === "Fox & Finch" && p.in_stock,
+        ).length,
+      ),
+    decoy: "12",
+  },
 ];
 
 const facets: ReadTask[] = [
@@ -222,7 +280,7 @@ const facets: ReadTask[] = [
     id: "facets.top-brand",
     category: "facets",
     difficulty: "easy",
-    prompt: "Which brand has the most products in the products collection?",
+    prompt: "Which brand has the most products in our catalog?",
     expected: async (ts) =>
       text(
         nthMostCommon(
@@ -231,23 +289,31 @@ const facets: ReadTask[] = [
           "top brand",
         ),
       ),
-    decoy: "Halcyon",
+    decoy: "Northwind",
   },
   {
-    id: "facets.distinct-genres",
+    // TRAP: the smallest brands are outside the default 10 facet values.
+    id: "facets.fewest-products-brand",
     category: "facets",
-    difficulty: "easy",
-    prompt: "How many distinct genres are there in the books collection?",
-    expected: async (ts) =>
-      number(new Set((await books(ts)).map((b) => b.genre)).size),
-    decoy: "5",
+    difficulty: "hard",
+    prompt: "Which brand has the fewest products in our catalog?",
+    expected: async (ts) => {
+      const counts = new Map<string, number>();
+      for (const p of await products(ts)) {
+        counts.set(p.brand, (counts.get(p.brand) ?? 0) + 1);
+      }
+      const ranked = [...counts].sort((a, b) => a[1] - b[1]);
+      if (ranked[0]?.[1] === ranked[1]?.[1]) throw new Error("tie for fewest");
+      return text(ranked[0]?.[0] ?? "");
+    },
+    decoy: "Tundra",
   },
   {
     id: "facets.average-audio-price",
     category: "facets",
     difficulty: "medium",
     prompt:
-      "What is the average price of products in the Audio category? Round to 2 decimal places.",
+      "What's the average price of our audio products? Round to 2 decimal places.",
     expected: async (ts) => {
       const audio = (await products(ts)).filter((p) => p.category === "Audio");
       return number(
@@ -257,13 +323,34 @@ const facets: ReadTask[] = [
         0.011,
       );
     },
-    decoy: "300",
+    decoy: "328.62",
+  },
+  {
+    id: "facets.office-price-sum",
+    category: "facets",
+    difficulty: "hard",
+    prompt:
+      "What's the combined price of all Office products released in 2022 or 2023? Round to 2 decimal places.",
+    expected: async (ts) =>
+      number(
+        Math.round(
+          (await products(ts))
+            .filter(
+              (p) =>
+                p.category === "Office" &&
+                (p.release_year === 2022 || p.release_year === 2023),
+            )
+            .reduce((s, p) => s + p.price, 0) * 100,
+        ) / 100,
+        0.05,
+      ),
+    decoy: "0",
   },
   {
     id: "facets.max-pages-fantasy",
     category: "facets",
     difficulty: "medium",
-    prompt: "What is the highest page count among Fantasy books?",
+    prompt: "How many pages does the longest fantasy book in the library have?",
     expected: async (ts) =>
       number(
         Math.max(
@@ -278,8 +365,7 @@ const facets: ReadTask[] = [
     id: "facets.second-language",
     category: "facets",
     difficulty: "medium",
-    prompt:
-      "Which language has the second-highest number of books in the books collection?",
+    prompt: "Which language has the second-most books in the library?",
     expected: async (ts) =>
       text(
         nthMostCommon(
@@ -294,63 +380,70 @@ const facets: ReadTask[] = [
     id: "facets.in-stock-count",
     category: "facets",
     difficulty: "easy",
-    prompt: "How many products are currently in stock?",
+    prompt: "How many products do we have in stock right now?",
     expected: async (ts) =>
       number((await products(ts)).filter((p) => p.in_stock).length),
-    decoy: "54",
+    decoy: "38",
   },
   {
-    id: "facets.categories-over-10",
+    id: "facets.big-categories",
     category: "facets",
     difficulty: "medium",
-    prompt:
-      "Which product categories contain more than 10 products? List them.",
+    prompt: "Which product categories have more than 600 products? List them.",
     expected: async (ts) => {
       const counts = new Map<string, number>();
       for (const p of await products(ts)) {
         counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
       }
-      return set([...counts].filter(([, count]) => count > 10).map(([c]) => c));
+      return set([...counts].filter(([, n]) => n > 600).map(([c]) => c));
     },
-    decoy: "Furniture, Audio, Office",
+    decoy: "Furniture, Audio",
+  },
+  {
+    id: "facets.most-reviewed-per-category",
+    category: "facets",
+    difficulty: "hard",
+    prompt:
+      "For each product category, which product has the most reviews? Give the product ids ordered by category name alphabetically.",
+    expected: async (ts) => {
+      const all = await products(ts);
+      const categories = [...new Set(all.map((p) => p.category))].sort();
+      return list(
+        categories.map(
+          (category) =>
+            uniqueMax(
+              all.filter((p) => p.category === category),
+              (p) => p.num_reviews,
+              `most reviewed ${category}`,
+            ).id,
+        ),
+      );
+    },
+    decoy: "p007",
   },
 ];
 
 const multiSearch: ReadTask[] = [
   {
-    id: "multi.furniture-and-mystery",
-    category: "multi-search",
-    difficulty: "medium",
-    prompt:
-      "For a dashboard I need two numbers: how many products are in the Furniture category, and how many books are in the Mystery genre. Answer with the two counts in that order.",
-    expected: async (ts) =>
-      list([
-        String(
-          (await products(ts)).filter((p) => p.category === "Furniture").length,
-        ),
-        String((await books(ts)).filter((b) => b.genre === "Mystery").length),
-      ]),
-    decoy: "14, 5",
-  },
-  {
     id: "multi.most-expensive-and-longest",
     category: "multi-search",
     difficulty: "medium",
     prompt:
-      "Give me the id of the most expensive product and the id of the book with the most pages, in that order.",
+      "What's the id of our most expensive product, and the id of the longest book in the library? In that order.",
     expected: async (ts) =>
       list([
-        uniqueMax(await products(ts), (p) => p.price, "most expensive").id,
-        uniqueMax(await books(ts), (b) => b.pages, "most pages").id,
+        uniqueMax(await products(ts), (p: Product) => p.price, "most expensive")
+          .id,
+        uniqueMax(await books(ts), (b: Book) => b.pages, "most pages").id,
       ]),
-    decoy: "p005, b029",
+    decoy: "p011, b029",
   },
   {
     id: "multi.harbor-in-both",
     category: "multi-search",
     difficulty: "hard",
     prompt:
-      "Run a text search for the word harbor in both the products collection (product names and descriptions) and the books collection (book titles). How many documents match in each? Answer with the products count, then the books count.",
+      "If someone searches for harbor, how many matching products do they get (searching product names and descriptions) and how many matching books (searching titles)? Products count first.",
     expected: async (ts) => {
       const [p, b] = await Promise.all([
         ts.search("products", {
@@ -365,17 +458,17 @@ const multiSearch: ReadTask[] = [
     decoy: "5, 2",
   },
   {
-    id: "multi.top-kitchen-and-poetry",
+    id: "multi.most-reviewed-kitchen-and-best-poetry",
     category: "multi-search",
     difficulty: "hard",
     prompt:
-      "What is the highest-rated product in the Kitchen category and the highest-rated book in the Poetry genre? Answer with the product id, then the book id.",
+      "Give me the id of our most-reviewed kitchen product and the id of the best-rated poetry book in the library, in that order.",
     expected: async (ts) =>
       list([
         uniqueMax(
           (await products(ts)).filter((p) => p.category === "Kitchen"),
-          (p) => p.rating,
-          "top kitchen",
+          (p) => p.num_reviews,
+          "most reviewed kitchen",
         ).id,
         uniqueMax(
           (await books(ts)).filter((b) => b.genre === "Poetry"),
@@ -383,7 +476,7 @@ const multiSearch: ReadTask[] = [
           "top poetry",
         ).id,
       ]),
-    decoy: "p041, b008",
+    decoy: "p041, b024",
   },
 ];
 
@@ -392,7 +485,7 @@ const lookup: ReadTask[] = [
     id: "lookup.price-by-id",
     category: "lookup",
     difficulty: "easy",
-    prompt: "What is the price of the product with id p017?",
+    prompt: "How much does product p017 cost?",
     expected: async (ts) =>
       number(
         (
@@ -409,7 +502,7 @@ const lookup: ReadTask[] = [
     category: "lookup",
     difficulty: "easy",
     prompt:
-      "Who are the authors of the books with ids b003, b010, and b021? Answer in that order.",
+      "Who wrote library books b003, b010, and b021? Answer in that order.",
     expected: async (ts) => {
       const all = await books(ts);
       return list(
@@ -424,7 +517,7 @@ const lookup: ReadTask[] = [
     id: "lookup.isbn-by-title",
     category: "lookup",
     difficulty: "medium",
-    prompt: 'What is the ISBN of the book titled "The Copper Cartographer"?',
+    prompt: 'What is the ISBN of "The Copper Cartographer"?',
     expected: async (ts) => {
       const match = (await books(ts)).filter(
         (b) => b.title === "The Copper Cartographer",
@@ -435,98 +528,6 @@ const lookup: ReadTask[] = [
     },
     decoy: "978-0-11507-077-2",
   },
-  {
-    id: "lookup.tags-by-id",
-    category: "lookup",
-    difficulty: "easy",
-    prompt: "Which tags does the product with id p004 have?",
-    expected: async (ts) =>
-      set(
-        (
-          await ts.get<{ tags: string[] }>(
-            "/collections/products/documents/p004",
-          )
-        ).tags,
-      ),
-    decoy: "compact, wood",
-  },
-];
-
-const ROOT_CAUSES =
-  "Answer with exactly one of: field_missing, not_facetable, not_indexed, not_sortable, wrong_type.";
-
-const debugging: ReadTask[] = [
-  {
-    id: "debug.facet-category",
-    category: "debugging",
-    difficulty: "medium",
-    prompt: `Faceting the support_articles collection by its category field fails with an error. What is the root cause? ${ROOT_CAUSES}`,
-    expected: text("not_facetable"),
-    decoy: "field_missing",
-  },
-  {
-    id: "debug.filter-product-area",
-    category: "debugging",
-    difficulty: "medium",
-    prompt: `Filtering the support_articles collection by product_area (for example product_area:=payments) fails with an error. What is the root cause? ${ROOT_CAUSES}`,
-    expected: text("not_indexed"),
-    decoy: "not_facetable",
-  },
-  {
-    id: "debug.sort-views",
-    category: "debugging",
-    difficulty: "medium",
-    prompt: `Sorting the support_articles collection by views (views:desc) fails with an error. What is the root cause? ${ROOT_CAUSES}`,
-    expected: text("not_sortable"),
-    decoy: "field_missing",
-  },
-  {
-    id: "debug.preset-refund",
-    category: "debugging",
-    difficulty: "hard",
-    prompt:
-      "Searching the support_articles collection for refund using the search preset support_search returns no results, although several articles discuss refunds. Which field must be added to the preset's query_by to fix this? Answer with the field name.",
-    expected: async (ts) => {
-      // Guard the premise: the preset finds nothing, the body field does.
-      const viaPreset = await ts.search("support_articles", {
-        q: "refund",
-        preset: "support_search",
-      });
-      const viaBody = (await articles(ts)).filter((a) =>
-        /refund/i.test(a.body),
-      );
-      if (viaPreset.found !== 0 || viaBody.length === 0) {
-        throw new Error("preset-refund premise no longer holds");
-      }
-      return text("body");
-    },
-    decoy: "title",
-  },
-  {
-    id: "debug.missing-synonym",
-    category: "debugging",
-    difficulty: "hard",
-    prompt:
-      "Users searching the support_articles collection for login get no results, although several articles explain how to sign in. A synonym is missing. Which synonym set is attached to this collection and should receive the fix? Answer with the synonym set name.",
-    expected: async (ts) => {
-      const info = await ts.get<{ synonym_sets?: string[] }>(
-        "/collections/support_articles",
-      );
-      if (info.synonym_sets?.length !== 1)
-        throw new Error("expected one linked set");
-      return text(info.synonym_sets[0] ?? "");
-    },
-    decoy: "furniture-synonyms",
-  },
-  {
-    id: "debug.hidden-product",
-    category: "debugging",
-    difficulty: "hard",
-    prompt:
-      'The in-stock product "Garnet Noise-Cancelling Headphones" never appears when customers search the products collection for headphones. What is the id of the rule responsible?',
-    expected: text("hide-discontinued-headphones"),
-    decoy: "promote-linden-sofa",
-  },
 ];
 
 const config: ReadTask[] = [
@@ -534,7 +535,7 @@ const config: ReadTask[] = [
     id: "config.alias-target",
     category: "config",
     difficulty: "easy",
-    prompt: "Which collection does the alias catalog point to?",
+    prompt: "Which collection actually backs our catalog?",
     expected: async (ts) =>
       text(
         (await ts.get<{ collection_name: string }>("/aliases/catalog"))
@@ -546,8 +547,7 @@ const config: ReadTask[] = [
     id: "config.synonym-count",
     category: "config",
     difficulty: "easy",
-    prompt:
-      "How many synonym rules does the synonym set furniture-synonyms contain?",
+    prompt: "How many synonym rules are in the furniture-synonyms set?",
     expected: async (ts) =>
       number(
         (await ts.get<{ items: unknown[] }>("/synonym_sets/furniture-synonyms"))
@@ -560,7 +560,7 @@ const config: ReadTask[] = [
     category: "config",
     difficulty: "medium",
     prompt:
-      "Which fields does the search preset book_search search in (its query_by)? List them.",
+      "Which fields does the saved search book_search look in? List them.",
     expected: async (ts) =>
       set(
         (
@@ -573,29 +573,13 @@ const config: ReadTask[] = [
     id: "config.linked-synonym-sets",
     category: "config",
     difficulty: "medium",
-    prompt:
-      "Which synonym sets are attached to the products collection? List their names.",
+    prompt: "Which synonym sets apply to searches in our catalog?",
     expected: async (ts) =>
       set(
         (await ts.get<{ synonym_sets?: string[] }>("/collections/products"))
           .synonym_sets ?? [],
       ),
     decoy: "furniture-synonyms, support-synonyms",
-  },
-  {
-    id: "config.stopwords",
-    category: "config",
-    difficulty: "easy",
-    prompt: "Which words are in the stopwords set common-words? List them.",
-    expected: async (ts) =>
-      set(
-        (
-          await ts.get<{ stopwords: { stopwords: string[] } }>(
-            "/stopwords/common-words",
-          )
-        ).stopwords.stopwords,
-      ),
-    decoy: "the, a, an, of",
   },
   {
     id: "config.all-aliases",
@@ -618,7 +602,7 @@ const config: ReadTask[] = [
     category: "config",
     difficulty: "medium",
     prompt:
-      "When someone searches the products collection for exactly sofa, which product id is pinned to the top by a curation rule?",
+      "When someone searches our catalog for exactly sofa, which product id gets pinned to the top?",
     expected: text("p010"),
     decoy: "p001",
   },
@@ -630,6 +614,5 @@ export const readTasks: AnswerTask[] = [
   ...facets,
   ...multiSearch,
   ...lookup,
-  ...debugging,
   ...config,
 ].map((task) => ({ ...task, kind: "answer", mode: "read-only" }));

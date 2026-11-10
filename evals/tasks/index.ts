@@ -1,8 +1,9 @@
 import type { Task } from "../src/types.js";
+import { debugTasks } from "./debug.js";
 import { readTasks } from "./read.js";
 import { writeTasks } from "./write.js";
 
-export const tasks: Task[] = [...readTasks, ...writeTasks];
+export const tasks: Task[] = [...readTasks, ...debugTasks, ...writeTasks];
 
 const ids = new Set<string>();
 for (const task of tasks) {

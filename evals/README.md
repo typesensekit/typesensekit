@@ -2,7 +2,7 @@
 
 A repeatable task-success benchmark for how well an AI agent gets real
 Typesense work done through an interface: the TypesenseKit MCP server, the
-`tsk` CLI, or any other Typesense MCP server you plug in. The same 48 tasks and
+`tsk` CLI, or any other Typesense MCP server you plug in. The same 50 tasks and
 graders run against every interface, so results compare directly.
 
 **On demand only.** Runs call the Claude API and cost money. This workspace is
@@ -24,7 +24,7 @@ pnpm eval --inspect
 # Smoke run: a few tasks per interface on Haiku (see Auth below).
 pnpm eval -i both -m claude-haiku-5-5 -t discovery.count-books,search.find-by-name,facets.top-brand,debug.facet-category,write.create-alias
 
-# Full benchmark: 48 tasks × 2 interfaces × 3 models, 3 repetitions, 4 parallel clusters.
+# Full benchmark: 50 tasks × 2 interfaces × 3 models, 3 repetitions, 4 parallel clusters.
 pnpm eval -i both -r 3 -c 4 --yes
 ```
 
@@ -103,8 +103,11 @@ the worst case (`attempts × --max-budget`) before anything starts.
      deferral, so the full tool-definition cost is part of the measurement.
    - **CLI arms** see only `Bash`. A `PreToolUse` hook that cannot be bypassed
      (`src/shell-guard.ts`) allows only `allowedCommands` (`tsk`, `jq`, `head`,
-     `grep`, …). It blocks command substitution, heredocs, file redirection,
-     env assignments, and paths outside the sandbox. `tsk` is a PATH shim to
+     `grep`, `cat`, …). Command substitution, process substitution, heredocs,
+     and file redirection are allowed, with substituted commands checked
+     recursively. Files can be read and written only inside the session's
+     temp working directory. Env assignments, backgrounding, and paths that
+     leave the working directory (absolute, `~`, `..`) are blocked. `tsk` is a PATH shim to
      `packages/cli/dist/cli.js`, configured through `TYPESENSE_URL` /
      `TYPESENSE_API_KEY`. The agent has to discover usage itself with
      `tsk operations`, `--help`, `--schema`, and `--examples`.
@@ -115,16 +118,17 @@ the worst case (`attempts × --max-budget`) before anything starts.
    - Expected values come from **oracles** that query the freshly seeded
      cluster before the agent starts. Oracles throw on ties, so ambiguous
      tasks fail the dry run instead of grading randomly.
-   - State tasks (write mode) inspect the cluster afterwards with direct HTTP.
-     The checks are behavioral where possible (does `couch` now find every
-     sofa?), so any valid approach passes.
+   - State tasks (debugging and write, full-access) inspect the cluster
+     afterwards with direct HTTP. The checks are behavioral (does `couch` now
+     find every sofa? does faceting by category work, with no articles
+     lost?), so any valid fix passes.
 
 ### Modes
 
 | Mode | Tasks | TypesenseKit MCP | TypesenseKit CLI |
 | --- | --- | --- | --- |
-| `read-only` | 41 answer tasks | default server (`TYPESENSEKIT_READ_ONLY` unset): 45 tools | full CLI (it has no read-only switch); state is reset after every attempt anyway |
-| `full-access` | 7 write tasks | `TYPESENSEKIT_READ_ONLY=false`: 95 tools | full CLI |
+| `read-only` | 36 answer tasks | default server (`TYPESENSEKIT_READ_ONLY` unset): 45 tools | full CLI (it has no read-only switch); state is reset after every attempt anyway |
+| `full-access` | 6 debugging + 8 write tasks | `TYPESENSEKIT_READ_ONLY=false`: 95 tools | full CLI |
 
 An interface that lacks a mode skips that mode's tasks; skips are listed in
 the report.
@@ -153,10 +157,13 @@ All names are fictional, so an agent can't answer from memory. Regenerate them
 deterministically with `pnpm --filter @typesensekit/evals exec tsx scripts/generate-datasets.ts`,
 then rerun `--dry-run`.
 
-- `products.jsonl` (54): brand, category, price, rating, stock, and tags
-  facets. Linked to the `furniture-synonyms` synonym set (no couch↔sofa) and
-  the `product-curations` curation set, which hides p016 for "headphones" and
-  pins p010 for "sofa".
+- `products.jsonl` (3,034): 54 hand-checked products (p001–p054) plus 2,980
+  generated ones (p1001+), with brand, category, price, rating, stock, and
+  tags facets. Linked to the `furniture-synonyms` synonym set (lamp↔light; no
+  couch↔sofa) and the `product-curations` curation set, which hides p016 for
+  "headphones" and pins p010 for "sofa". 16 brands with distinct sizes: the
+  six smallest, including "Fox & Finch", fall outside Typesense's default 10
+  facet values.
 - `books.jsonl` (50): author, genre, year, pages, and language. b050 is a
   deliberate duplicate of b012.
 - `support_articles.jsonl` (24): **deliberately misconfigured.**
@@ -169,6 +176,26 @@ then rerun `--dry-run`.
 - `fixtures.json`: schemas, synonym sets, curation sets, presets, stopwords,
   and aliases.
 
+### Trap tasks
+
+These tasks have a plausible wrong answer that comes from Typesense defaults.
+An agent passes only if it notices the default and works around it.
+
+| Task | Naive approach | Why it's wrong |
+| --- | --- | --- |
+| `search.cheapest-sofa` | search `sofa`, sort by price | a curation rule pins p010 first |
+| `search.lamp-name-count` | count hits for `lamp` | the synonym set also matches lights |
+| `search.list-many-ids` | read the first page of hits | 12 matches; only 10 are returned per page by default |
+| `search.fox-and-finch-in-stock` | `filter_by: brand:=Fox & Finch` | `&` must be escaped; the brand is outside the default facet values |
+| `facets.fewest-products-brand` | `facet_by: brand` | only the top 10 brands come back by default |
+| `facets.office-price-sum`, `facets.most-reviewed-per-category` | dump and add up | 3k products; needs facet stats or `group_by` |
+
+Prompts use the words a user would ("our catalog", "the library", "the help
+center", "saved search") rather than collection or field names, so discovery
+is part of every task. Debugging tasks describe a symptom only ("sorting
+articles by most viewed fails; fix it") and are graded on whether the broken
+request now works with no data lost.
+
 ## Cost expectations
 
 These are rough estimates from list prices, not measurements. Your first run
@@ -179,7 +206,7 @@ Assume an attempt takes about 5 turns, with about 75k input tokens in total
 the first turn) and about 2k output tokens. At most, before caching discounts,
 that comes to:
 
-| Model | Input / output per MTok | ≈ per attempt (uncached) | Full run: 48 tasks × 2 interfaces = 96 attempts |
+| Model | Input / output per MTok | ≈ per attempt (uncached) | Full run: 50 tasks × 2 interfaces = 100 attempts |
 | --- | --- | --- | --- |
 | claude-haiku-5-5 | $0.10 / $0.50 | ~$0.01 | ~$1 |
 | claude-sonnet-5-5 | $2 / $10 | ~$0.17 | ~$16 |
@@ -231,8 +258,9 @@ and confirms the server reports `connected`.
 
 ## Adding a task
 
-Add a task to `tasks/read.ts` (answer, read-only) or `tasks/write.ts` (state,
-full-access):
+Add a task to `tasks/read.ts` (answer, read-only), `tasks/debug.ts`, or
+`tasks/write.ts` (state, full-access). Shared state-check helpers are in
+`tasks/helpers.ts`:
 
 - `id` (`<category>.<slug>`), `category`, `difficulty`, and a natural-language
   `prompt`. Never name a tool, command, or interface in the prompt.

@@ -186,7 +186,7 @@ for (const [category, count] of Object.entries(perCategory)) {
     });
   }
 }
-writeJsonl("products.jsonl", products);
+// Written at the end, after the bulk catalog is appended.
 
 // ------------------------------------------------------------------- books
 const authors = [
@@ -448,6 +448,87 @@ writeJsonl(
   })),
 );
 
+// ------------------------------------------------------------ bulk catalog
+// ~3k extra products so agents cannot just dump the catalog and count, and
+// so Typesense defaults (10 hits per page, 10 facet values, typo tolerance,
+// synonyms, curation pins) produce wrong answers unless handled. Uses its
+// own PRNG so the 54 hand-checked products, books, and articles above stay
+// byte-identical.
+const bulkRand = mulberry32(31337);
+const bulkPick = <T>(items: readonly T[]): T =>
+  items[Math.floor(bulkRand() * items.length)] as T;
+const bulkBetween = (min: number, max: number) =>
+  min + bulkRand() * (max - min);
+// Exact per-brand counts (all totals distinct). The six smallest brands fall
+// outside Typesense's default max_facet_values of 10. "Fox & Finch" also
+// needs escaping in filter_by.
+const bulkBrands: [string, number][] = [
+  ["Acme", 400],
+  ["Northwind", 380],
+  ["Lumen", 360],
+  ["Halcyon", 340],
+  ["Brightway", 320],
+  ["Oakridge", 300],
+  ["Verdant", 240],
+  ["Kiln", 190],
+  ["Mosaic", 150],
+  ["Tundra", 110],
+  ["Pinnacle", 60],
+  ["Solace", 42],
+  ["Arbor", 33],
+  ["Copperline", 25],
+  ["Wren", 18],
+  ["Fox & Finch", 12],
+];
+const bulkModels = [
+  "Alder",
+  "Basalt",
+  "Cedar",
+  "Delta",
+  "Echo",
+  "Flint",
+  "Grove",
+  "Hollis",
+  "Indigo",
+  "Jasper",
+  "Kodiak",
+  "Lumina",
+  "Mesa",
+  "Nova",
+  "Onyx",
+  "Prairie",
+];
+const categories = Object.keys(catalog);
+const bulk: object[] = [];
+let bulkIndex = 1000;
+for (const [brand, count] of bulkBrands) {
+  for (let i = 0; i < count; i++) {
+    bulkIndex++;
+    const category = bulkPick(categories);
+    const spec = catalog[category];
+    if (!spec) throw new Error(category);
+    const tagCount = 1 + Math.floor(bulkRand() * 3);
+    const tags = [
+      ...new Set(Array.from({ length: tagCount }, () => bulkPick(spec.tags))),
+    ].sort();
+    bulk.push({
+      id: `p${bulkIndex}`,
+      // The model code keeps every name unique.
+      name: `${bulkPick(bulkModels)} ${bulkPick(spec.kinds)} ${String.fromCharCode(65 + (bulkIndex % 26))}${bulkIndex}`,
+      description: bulkPick(descriptions[category] ?? [""]),
+      brand,
+      category,
+      price: round(bulkBetween(spec.price[0], spec.price[1]), 2),
+      rating: round(bulkBetween(2.5, 5), 1),
+      in_stock: bulkRand() > 0.25,
+      tags,
+      release_year: 2018 + Math.floor(bulkRand() * 8),
+      num_reviews: Math.floor(bulkBetween(0, 2500)),
+    });
+  }
+}
+writeJsonl("products.jsonl", [...products, ...bulk]);
+
 console.log(
-  `wrote ${products.length} products, ${books.length} books, ${articles.length} support articles`,
+  `wrote ${products.length + bulk.length} products (${products.length} curated + ${bulk.length} bulk), ${books.length} books, ${articles.length} support articles`,
 );

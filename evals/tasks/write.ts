@@ -4,42 +4,14 @@
  * checks are behavioral where possible (does the search now work?) so any
  * valid approach passes.
  */
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import {
-  type Article,
-  allOf,
-  articles,
-  fail,
-  ok,
-  type Product,
-  products,
-} from "../src/oracle.js";
-import { EVALS_ROOT } from "../src/paths.js";
+import { allOf, type Book, fail, ok, type Product } from "../src/oracle.js";
 import type { StateTask } from "../src/types.js";
-import type { TypesenseHttp } from "../src/typesense.js";
+import { allHitIds, attempt, docCount, seedRows } from "./helpers.js";
 
 type WriteTask = Omit<StateTask, "kind" | "mode">;
 
-function seedRows<T>(file: string): T[] {
-  return readFileSync(join(EVALS_ROOT, "datasets", file), "utf8")
-    .split("\n")
-    .filter((line) => line.trim())
-    .map((line) => JSON.parse(line) as T);
-}
-
-const docCount =
-  (collection: string, expected: number) => async (ts: TypesenseHttp) => {
-    const info = await ts.find<{ num_documents: number }>(
-      `/collections/${collection}`,
-    );
-    if (!info) return fail(`${collection} no longer exists`);
-    return info.num_documents === expected
-      ? ok(`${collection} has ${expected} documents`)
-      : fail(
-          `${collection} has ${info.num_documents} documents, expected ${expected}`,
-        );
-  };
+const seedProducts = () => seedRows<Product>("products.jsonl");
+const seedBooks = () => seedRows<Book>("books.jsonl");
 
 const writes: WriteTask[] = [
   {
@@ -47,29 +19,33 @@ const writes: WriteTask[] = [
     category: "write",
     difficulty: "medium",
     prompt:
-      "Customers who search the products collection for couch get no results, but we sell plenty of sofas. Make couch and sofa interchangeable in product searches.",
+      "Customers who search our catalog for couch get no results, but we sell lots of sofas. Make couch and sofa interchangeable in catalog searches.",
     check: async (ts) => {
-      const sofas = seedRows<Product>("products.jsonl").filter((p) =>
-        /\bsofa\b/i.test(p.name),
-      );
-      const result = await ts.search("products", {
-        q: "couch",
-        query_by: "name",
-        per_page: 100,
-      });
-      const ids = new Set(
-        (result.hits ?? []).map((h) => String(h.document.id)),
-      );
-      const missing = sofas.filter((s) => !ids.has(s.id));
-      if (missing.length > 0) {
-        return fail(
-          `"couch" found ${result.found} products; missing sofas ${missing.map((s) => s.id).join(", ")}`,
+      const sofas = seedProducts().filter((p) => /\bsofa\b/i.test(p.name));
+      return attempt("searching for couch fails", async () => {
+        const result = await ts.search("products", {
+          q: "couch",
+          query_by: "name",
+          per_page: 50,
+        });
+        if (result.found < sofas.length) {
+          return fail(
+            `"couch" finds ${result.found} products, expected at least ${sofas.length} sofas`,
+          );
+        }
+        const nonSofa = (result.hits ?? []).filter(
+          (h) => !/\bsofa\b/i.test(String(h.document.name)),
         );
-      }
-      return allOf([
-        async () => ok(`"couch" finds all ${sofas.length} sofas`),
-        () => docCount("products", 54)(ts),
-      ]);
+        if (nonSofa.length > 0) {
+          return fail(
+            `"couch" returns non-sofas, e.g. ${nonSofa[0]?.document.name}`,
+          );
+        }
+        return allOf([
+          async () => ok(`"couch" finds ${result.found} sofas`),
+          () => docCount(ts, "products", seedProducts().length),
+        ]);
+      });
     },
     reference: async (ts) => {
       await ts.request("PUT", "/synonym_sets/furniture-synonyms/items/couch", {
@@ -82,7 +58,7 @@ const writes: WriteTask[] = [
     category: "write",
     difficulty: "easy",
     prompt:
-      "Create an alias named store that points to the products collection.",
+      "Set up store as another name for our catalog, so searches against store hit the same products.",
     check: async (ts) => {
       const alias = await ts.find<{ collection_name: string }>(
         "/aliases/store",
@@ -103,11 +79,9 @@ const writes: WriteTask[] = [
     category: "write",
     difficulty: "easy",
     prompt:
-      "Change the price of the product with id p005 to 79.99. Leave every other field unchanged.",
+      "Change the price of product p005 to 79.99 and leave everything else about it unchanged.",
     check: async (ts) => {
-      const original = seedRows<Product>("products.jsonl").find(
-        (p) => p.id === "p005",
-      );
+      const original = seedProducts().find((p) => p.id === "p005");
       const doc = await ts.find<Product>(
         "/collections/products/documents/p005",
       );
@@ -130,95 +104,11 @@ const writes: WriteTask[] = [
     },
   },
   {
-    id: "write.fix-facet",
-    category: "write",
-    difficulty: "hard",
-    prompt:
-      "Make the category field of the support_articles collection facetable, without losing any documents or their category values.",
-    check: async (ts) => {
-      const seeded = seedRows<Article>("support_articles.jsonl");
-      const expected = new Map<string, number>();
-      for (const a of seeded)
-        expected.set(a.category, (expected.get(a.category) ?? 0) + 1);
-      let result: Awaited<ReturnType<TypesenseHttp["search"]>>;
-      try {
-        result = await ts.search("support_articles", {
-          q: "*",
-          facet_by: "category",
-          per_page: 0,
-          max_facet_values: 50,
-        });
-      } catch (error) {
-        return fail(`faceting still fails: ${(error as Error).message}`);
-      }
-      const counts = result.facet_counts?.[0]?.counts ?? [];
-      const wrong = [...expected].filter(
-        ([value, count]) =>
-          counts.find((c) => c.value === value)?.count !== count,
-      );
-      if (wrong.length > 0 || counts.length !== expected.size) {
-        return fail(
-          `category facet counts differ from the seed: ${JSON.stringify(counts)}`,
-        );
-      }
-      const current = await articles(ts);
-      return allOf([
-        async () => ok("category facets match the seed"),
-        async () =>
-          current.length === seeded.length
-            ? ok(`${seeded.length} articles kept`)
-            : fail(`${current.length} articles, expected ${seeded.length}`),
-      ]);
-    },
-    reference: async (ts) => {
-      await ts.request("PATCH", "/collections/support_articles", {
-        fields: [
-          { name: "category", drop: true },
-          { name: "category", type: "string", facet: true },
-        ],
-      });
-    },
-  },
-  {
-    id: "write.fix-preset",
-    category: "write",
-    difficulty: "medium",
-    prompt:
-      "The search preset support_search should also search article bodies, so that searching the support_articles collection for refund with this preset finds the refund articles. Fix the preset, and keep it searching titles as well.",
-    check: async (ts) => {
-      const preset = await ts.find<{ value: { query_by?: string } }>(
-        "/presets/support_search",
-      );
-      if (!preset) return fail("preset support_search no longer exists");
-      const fields = (preset.value.query_by ?? "")
-        .split(",")
-        .map((f) => f.trim());
-      if (!fields.includes("title") || !fields.includes("body")) {
-        return fail(`query_by is "${preset.value.query_by}"`);
-      }
-      const result = await ts.search("support_articles", {
-        q: "refund",
-        preset: "support_search",
-        per_page: 0,
-      });
-      return result.found > 0
-        ? ok(
-            `preset query_by=${fields.join(",")} finds ${result.found} refund articles`,
-          )
-        : fail("preset still finds no refund articles");
-    },
-    reference: async (ts) => {
-      await ts.request("PUT", "/presets/support_search", {
-        value: { query_by: "title,body" },
-      });
-    },
-  },
-  {
     id: "write.delete-duplicate",
     category: "write",
     difficulty: "medium",
     prompt:
-      "The books collection contains a duplicate: two documents share the same ISBN. Delete the copy with the higher id and keep the original.",
+      "The library lists one book twice (same ISBN). Delete the copy with the higher id and keep the original.",
     check: async (ts) =>
       allOf([
         async () =>
@@ -229,7 +119,7 @@ const writes: WriteTask[] = [
           (await ts.find("/collections/books/documents/b012"))
             ? ok("original b012 kept")
             : fail("original b012 was deleted"),
-        () => docCount("books", 49)(ts),
+        () => docCount(ts, "books", seedBooks().length - 1),
       ]),
     reference: async (ts) => {
       await ts.request("DELETE", "/collections/books/documents/b050");
@@ -240,37 +130,176 @@ const writes: WriteTask[] = [
     category: "write",
     difficulty: "medium",
     prompt:
-      "Create a search preset named cheap_audio for the products collection that restricts results to the Audio category with a price under 100.",
+      "Create a saved search named cheap_audio for our catalog that only returns audio products under $100.",
     check: async (ts) => {
       if (!(await ts.find("/presets/cheap_audio"))) {
         return fail("preset cheap_audio does not exist");
       }
-      const expected = (await products(ts))
-        .filter((p) => p.category === "Audio" && p.price < 100)
-        .map((p) => p.id)
-        .sort();
-      let found: string[];
-      try {
-        const result = await ts.search("products", {
+      const expected = new Set(
+        seedProducts()
+          .filter((p) => p.category === "Audio" && p.price < 100)
+          .map((p) => p.id),
+      );
+      return attempt("searching with the preset fails", async () => {
+        const { found, ids } = await allHitIds(ts, "products", {
           q: "*",
           preset: "cheap_audio",
-          per_page: 100,
         });
-        found = (result.hits ?? []).map((h) => String(h.document.id)).sort();
-      } catch (error) {
-        return fail(
-          `searching with the preset fails: ${(error as Error).message}`,
-        );
-      }
-      return JSON.stringify(found) === JSON.stringify(expected)
-        ? ok(`preset returns exactly ${expected.join(", ")}`)
-        : fail(
-            `preset returns [${found.join(", ")}], expected [${expected.join(", ")}]`,
+        const extra = ids.filter((id) => !expected.has(id));
+        if (found !== expected.size || extra.length > 0) {
+          return fail(
+            `preset returns ${found} products (${extra.length} outside Audio < $100), expected ${expected.size}`,
           );
+        }
+        return ok(
+          `preset returns exactly the ${expected.size} audio products under $100`,
+        );
+      });
     },
     reference: async (ts) => {
       await ts.request("PUT", "/presets/cheap_audio", {
         value: { filter_by: "category:=Audio && price:<100" },
+      });
+    },
+  },
+  {
+    id: "write.reindex-books",
+    category: "write",
+    difficulty: "hard",
+    prompt:
+      "We want to sort the library by title, but title isn't sortable. Create a new collection books_v2 with every book and a sortable title, then switch the library over to it. Keep the old books collection around for rollback.",
+    check: async (ts) => {
+      const ids = seedBooks().map((b) => b.id);
+      return attempt("books_v2 check fails", () =>
+        allOf([
+          async () => {
+            const alias = await ts.find<{ collection_name: string }>(
+              "/aliases/library",
+            );
+            return alias?.collection_name === "books_v2"
+              ? ok("library -> books_v2")
+              : fail(`library -> ${alias?.collection_name ?? "(missing)"}`);
+          },
+          async () => {
+            const copied = (await ts.exportDocuments<Book>("books_v2")).map(
+              (b) => b.id,
+            );
+            const missing = ids.filter((id) => !copied.includes(id));
+            return missing.length === 0 && copied.length === ids.length
+              ? ok(`books_v2 has all ${ids.length} books`)
+              : fail(
+                  `books_v2 has ${copied.length} books; missing ${missing.slice(0, 5).join(", ")}`,
+                );
+          },
+          async () => {
+            await ts.search("books_v2", {
+              q: "*",
+              sort_by: "title:asc",
+              per_page: 1,
+            });
+            return ok("books_v2 sorts by title");
+          },
+          () => docCount(ts, "books", ids.length),
+        ]),
+      );
+    },
+    reference: async (ts) => {
+      const schema = await ts.get<{
+        fields: Record<string, unknown>[];
+        default_sorting_field?: string;
+      }>("/collections/books");
+      await ts.request("POST", "/collections", {
+        name: "books_v2",
+        fields: schema.fields.map((field) =>
+          field.name === "title" ? { ...field, sort: true } : field,
+        ),
+        default_sorting_field: schema.default_sorting_field,
+      });
+      const jsonl = await ts.get<string>("/collections/books/documents/export");
+      await ts.request(
+        "POST",
+        "/collections/books_v2/documents/import",
+        jsonl,
+        {
+          action: "create",
+        },
+      );
+      await ts.request("PUT", "/aliases/library", {
+        collection_name: "books_v2",
+      });
+    },
+  },
+  {
+    id: "write.scoped-search-key",
+    category: "write",
+    difficulty: "medium",
+    prompt:
+      "Create an API key for our storefront that can only search the products collection and do nothing else.",
+    check: async (ts) => {
+      const { keys } = await ts.get<{
+        keys: { actions: string[]; collections: string[] }[];
+      }>("/keys");
+      const scoped = keys.find(
+        (key) =>
+          key.actions.length > 0 &&
+          key.actions.every((a) => a === "documents:search") &&
+          key.collections.includes("products") &&
+          key.collections.every((c) => c === "products" || c === "catalog"),
+      );
+      return scoped
+        ? ok("a documents:search key scoped to products exists")
+        : fail(
+            `no key limited to documents:search on products; keys: ${JSON.stringify(
+              keys.map((k) => ({
+                actions: k.actions,
+                collections: k.collections,
+              })),
+            )}`,
+          );
+    },
+    reference: async (ts) => {
+      await ts.request("POST", "/keys", {
+        description: "storefront search",
+        actions: ["documents:search"],
+        collections: ["products"],
+      });
+    },
+  },
+  {
+    id: "write.bulk-delete",
+    category: "write",
+    difficulty: "hard",
+    prompt:
+      "Remove every out-of-stock Halcyon kitchen product from our catalog. Don't touch anything else.",
+    check: async (ts) => {
+      const seeded = seedProducts();
+      const targets = seeded.filter(
+        (p) => p.brand === "Halcyon" && p.category === "Kitchen" && !p.in_stock,
+      );
+      return attempt("bulk-delete check fails", () =>
+        allOf([
+          async () => {
+            const result = await ts.search("products", {
+              q: "*",
+              filter_by:
+                "brand:=Halcyon && category:=Kitchen && in_stock:=false",
+              per_page: 0,
+            });
+            return result.found === 0
+              ? ok(
+                  `all ${targets.length} out-of-stock Halcyon kitchen products removed`,
+                )
+              : fail(
+                  `${result.found} out-of-stock Halcyon kitchen products remain`,
+                );
+          },
+          () => docCount(ts, "products", seeded.length - targets.length),
+        ]),
+      );
+    },
+    reference: async (ts) => {
+      await ts.request("DELETE", "/collections/products/documents", undefined, {
+        filter_by: "brand:=Halcyon && category:=Kitchen && in_stock:=false",
       });
     },
   },
