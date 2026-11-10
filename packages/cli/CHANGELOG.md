@@ -1,5 +1,26 @@
 # @typesensekit/cli
 
+## 1.6.0
+
+### Minor Changes
+
+- 0c94c19: Make the CLI faster to learn from a shell. `tsk` and `tsk --help` now open with a quick-start cheat sheet, and `tsk operations` prints it on stderr so its stdout stays the plain `name<TAB>summary` list. Every input field can be passed as a `--<field> value` flag, and search/export accept Typesense parameters as flags (`tsk search products --filter-by 'price:<100' --per-page 0 --compact`) or as flat `--input` keys, with `q` defaulting to `*`. `collections list|retrieve --compact` prints a short overview with document counts, aliases and field facet/sort flags. When a cluster is configured, `tsk`, `tsk --help` and `tsk operations` also show that overview for the connected cluster (one quick request; silent if unreachable; set `TSK_NO_OVERVIEW=1` to skip). Without `--json`, `--compact` search output is laid out densely (one hit or facet value per line, still valid JSON). `--compact` on other operations prints the same dense layout, and boolean flags accept `--facet true|false`. Extra flags on document writes set document fields (`tsk documents update products p1 --price 9.99`), and singular group names resolve (`tsk key create`). Operation help shows descriptions and field docs, `yes: true` in `--input` confirms destructive operations, and errors name unknown input fields and list a collection's fields when a field name is wrong. Unknown flags and extra arguments still run the command, now with a warning on stderr. Existing commands, flags and `--json` output are unchanged.
+- 0c94c19: Accept grouped operation paths and positional string inputs, add focused group and operation help with runnable examples, and report concise errors with diagnostics behind --debug. Add explicit JSONL and array export formats while preserving existing output.
+- 0c94c19: Help AI agents finish Typesense tasks in fewer calls:
+
+  - MCP tools now carry agent-oriented descriptions, and the server sends instructions covering discovery, search parameters, filter syntax, facets, synonym and curation sets, and schema changes.
+  - `search`, `documents.search` and `documents.export` document common Typesense parameters (`q`, `query_by`, `filter_by`, `sort_by`, `facet_by`, `per_page`, ...) while still accepting any other parameter.
+  - New optional `compact: true` on `search`, `documents.search` and `multi_search` returns hits as `{document}` only, without highlight and text-match metadata (`compact` inside `params` or a multi-search entry is honored too).
+  - New `documents.delete_by_filter`, `documents.update_by_filter` and `documents.copy` (server-side copy between collections, for reindexing) operations, full access only.
+  - `collections.fields.*` expose `facet`, `sort`, `index`, `optional`, `infix`, `stem` and `locale` in their schemas; `collections.fields.replace` defaults `type` to the field's current type.
+  - MCP errors add hints for common Typesense failures (in-place field changes, non-facetable, non-sortable or unindexed fields, missing `query_by`, unknown collections), and legacy `overrides.list` now points to the linked curation sets on Typesense v30.
+
+### Patch Changes
+
+- 0c94c19: Fix flag handling found in review: `--yes false` no longer confirms a destructive operation, `--params '{...}'` is used as the search/export params object (individual `--<param>` flags still override it), `--compact` output redacts credentials in collection schemas, and `collections.list --input '{"compact":true}' --compact` prints the compact result instead of an empty schema.
+- 0c94c19: Reduce CLI startup work by lazily constructing command arguments and caching schema conversion. Restore live discovery in top-level help, explain common write and schema-repair workflows, and accept API key IDs as positional arguments.
+- 0c94c19: Update dependencies to clear all `pnpm audit` advisories: Zod 4.6 (replacing Zod 3 and `zod-to-json-schema`, using Zod's built-in JSON Schema output), `@modelcontextprotocol/sdk` 1.32, and `typesense` 3.2, plus patched transitive versions of `follow-redirects`, `fast-uri`, `hono`, `@hono/node-server`, `body-parser`, `qs`, `ip-address`, `undici`, `sharp` and `source-map-js`. Validation error messages now use Zod 4's wording, and `--schema` output marks passthrough inputs with `additionalProperties: {}` (equivalent to `true`).
+
 ## 1.5.0
 
 ### Minor Changes
