@@ -72,7 +72,8 @@ export const curationSetOperations = [
   {
     name: "curation_sets.items.retrieve",
     summary: "Retrieve an item in a global curation set",
-    description: "Get one rule from a global curation set.",
+    description:
+      "Get one rule (query match, includes, excludes) from a global curation set.",
     category: "curations",
     input: z.object({ name: z.string(), id: z.string() }),
     execute: async (client, input) =>

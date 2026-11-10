@@ -13,7 +13,7 @@
 
 TypesenseKit is an independent, open-source CLI and MCP server for Typesense. Inspect collections, run searches, and check cluster health from your terminal or a compatible AI assistant.
 
-Both interfaces share **95 operations with validated inputs**. MCP access is **read-only by default**; enabling full access exposes write, delete, key-management, and raw API tools. Use a scoped Typesense API key to restrict what the server can access.
+Both interfaces share **97 operations with validated inputs**. MCP access is **read-only by default**; enabling full access exposes write, delete, key-management, and raw API tools. Use a scoped Typesense API key to restrict what the server can access.
 
 **[Website](https://typesensekit.vercel.app)** · **[Typesense CLI](https://typesensekit.vercel.app/typesense-cli/)** · **[Typesense MCP](https://typesensekit.vercel.app/typesense-mcp/)** · **[Guides](https://typesensekit.vercel.app/guides/clients/)**
 

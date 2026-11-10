@@ -115,3 +115,44 @@ it("drains in-flight batch reads after a failure without starting more", async (
   await rejected;
   expect(get).toHaveBeenCalledTimes(8);
 });
+
+it("deletes and updates documents by filter in one request", async () => {
+  const deleteOperation = getOperation("documents.delete_by_filter");
+  const updateOperation = getOperation("documents.update_by_filter");
+  const del = vi.fn().mockResolvedValue({ num_deleted: 3 });
+  const patch = vi.fn().mockResolvedValue({ num_updated: 2 });
+  const client = {
+    apiCall: { delete: del, patch },
+  } as unknown as TypesenseClient;
+
+  await expect(
+    deleteOperation.execute(
+      client,
+      deleteOperation.input.parse({
+        collection: "products",
+        filterBy: "in_stock:=false",
+      }),
+    ),
+  ).resolves.toEqual({ num_deleted: 3 });
+  expect(del).toHaveBeenCalledWith("/collections/products/documents", {
+    filter_by: "in_stock:=false",
+  });
+
+  await updateOperation.execute(
+    client,
+    updateOperation.input.parse({
+      collection: "products",
+      filterBy: "brand:=Acme",
+      document: { featured: true },
+    }),
+  );
+  expect(patch).toHaveBeenCalledWith(
+    "/collections/products/documents",
+    { featured: true },
+    { filter_by: "brand:=Acme" },
+  );
+  expect(
+    deleteOperation.input.safeParse({ collection: "products", filterBy: "" })
+      .success,
+  ).toBe(false);
+});

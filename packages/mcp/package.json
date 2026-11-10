@@ -42,7 +42,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "95 typed Typesense operations for AI agents through an MCP server that is read-only by default.",
+  "description": "97 typed Typesense operations for AI agents through an MCP server that is read-only by default.",
   "license": "MIT",
   "author": "Akshit Kr Nagpal",
   "repository": {

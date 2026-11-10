@@ -47,7 +47,7 @@ export const analyticsOperations = [
   {
     name: "analytics.rules.retrieve",
     summary: "Retrieve an analytics rule",
-    description: "Get one analytics rule.",
+    description: "Get one analytics rule definition by name.",
     category: "analytics",
     input: z.object({ name: z.string() }),
     execute: async (client, input) =>
@@ -92,7 +92,6 @@ export const analyticsOperations = [
   {
     name: "analytics.status",
     summary: "Retrieve analytics subsystem status",
-    description: "Get analytics subsystem status.",
     category: "analytics",
     input: z.object({}),
     execute: async (client) => api(client).get("/analytics/status"),

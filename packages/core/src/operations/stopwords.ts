@@ -6,7 +6,7 @@ export const stopwordsOperations = [
   {
     name: "stopwords.list",
     summary: "List stopwords",
-    description: "List all stopword sets.",
+    description: "List all stopword sets with their words.",
     category: "stopwords",
     input: z.object({}),
     execute: async (client) => api(client).get("/stopwords"),
@@ -25,7 +25,7 @@ export const stopwordsOperations = [
   {
     name: "stopwords.retrieve",
     summary: "Retrieve a stopword",
-    description: "Get one stopword set.",
+    description: "Get one stopword set and its words by name.",
     category: "stopwords",
     input: z.object({ name: z.string() }),
     execute: async (client, input) =>

@@ -22,7 +22,7 @@ export const conversationOperations = [
   {
     name: "conversations.models.retrieve",
     summary: "Retrieve a conversation model",
-    description: "Get one conversational search model.",
+    description: "Get one conversational search (RAG) model by id.",
     category: "conversations",
     input: z.object({ id: z.string() }),
     execute: async (client, input) =>

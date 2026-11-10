@@ -217,4 +217,47 @@ describe("collection operations", () => {
       fields: [newField],
     });
   });
+
+  it("replaces a field with new flags, keeping its type when omitted", async () => {
+    const replaceOperation = getOperation("collections.fields.replace");
+    const oldField = { name: "views", type: "int32", sort: false };
+    const newField = { name: "views", type: "int32", sort: true };
+    const get = vi
+      .fn()
+      .mockResolvedValueOnce({ fields: [oldField] })
+      .mockResolvedValueOnce({ fields: [oldField] })
+      .mockResolvedValueOnce({ fields: [] })
+      .mockResolvedValueOnce({ fields: [newField] })
+      .mockResolvedValueOnce({ fields: [newField] });
+    const patch = vi.fn().mockResolvedValue({ ok: true });
+    const client = { apiCall: { get, patch } } as unknown as TypesenseClient;
+
+    await expect(
+      replaceOperation.execute(
+        client,
+        replaceOperation.input.parse({
+          collection: "support",
+          field: "views",
+          sort: true,
+          timeoutMs: 100,
+          intervalMs: 0,
+        }),
+      ),
+    ).resolves.toMatchObject({ before: oldField, after: newField });
+    expect(patch).toHaveBeenNthCalledWith(2, "/collections/support", {
+      fields: [newField],
+    });
+  });
+
+  it("names MCP input fields when a wait condition is missing", async () => {
+    const waitOperation = getOperation("collections.wait");
+    const get = vi.fn().mockResolvedValue({ fields: [] });
+    const client = { apiCall: { get } } as unknown as TypesenseClient;
+    await expect(
+      waitOperation.execute(
+        client,
+        waitOperation.input.parse({ collection: "products" }),
+      ),
+    ).rejects.toThrow("fieldPresent, fieldMissing, or fieldEmbedFrom");
+  });
 });
