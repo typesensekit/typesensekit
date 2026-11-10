@@ -4,8 +4,10 @@ import {
   operations,
 } from "@typesensekit/core";
 import { type ArgsDef, defineCommand } from "citty";
+import { ZodError } from "zod";
 import { confirmDestructiveOperation } from "./confirmation.js";
 import {
+  inputObjectSchema,
   renderInputSchema,
   renderOperationExamples,
 } from "./operation-docs.js";
@@ -75,7 +77,7 @@ function waitArgs() {
   } as const;
 }
 
-function operationSpecificArgs(operationName: string): ArgsDef {
+export function operationSpecificArgs(operationName: string): ArgsDef {
   if (operationName === "keys.create")
     return {
       reveal: {
@@ -106,6 +108,32 @@ export function operationCommands() {
       defineCommand({
         meta: { name: operation.name, description: operation.summary },
         args: {
+          ...Object.fromEntries(
+            Object.entries(inputObjectSchema(operation.input).properties ?? {})
+              .filter(
+                ([key, schema]) =>
+                  schema.type === "string" &&
+                  inputObjectSchema(operation.input).required?.includes(key) &&
+                  !(key in operationSpecificArgs(operation.name)),
+              )
+              .map(([key]) => [
+                key,
+                {
+                  type: "positional" as const,
+                  required: false,
+                  description: `Input ${key} (or use --input)`,
+                },
+              ]),
+          ),
+          ...(operation.name === "documents.export"
+            ? {
+                format: {
+                  type: "string" as const,
+                  description:
+                    "jsonl | array (default: JSON string; --json unchanged)",
+                },
+              }
+            : {}),
           input: {
             type: "string",
             description: "JSON object matching this operation input schema",
@@ -143,10 +171,44 @@ export function operationCommands() {
             return;
           }
 
-          const input = operation.input.parse({
-            ...parseInput(args.input),
-            ...operationSpecificInput(operation.name, args),
-          });
+          const positional = Object.fromEntries(
+            Object.keys(inputObjectSchema(operation.input).properties ?? {})
+              .filter(
+                (key) =>
+                  !(key in operationSpecificArgs(operation.name)) &&
+                  typeof args[key] === "string",
+              )
+              .map((key) => [key, args[key]]),
+          );
+          let input: Record<string, unknown>;
+          try {
+            input = operation.input.parse({
+              ...positional,
+              ...parseInput(args.input),
+              ...operationSpecificInput(operation.name, args),
+            });
+          } catch (error) {
+            const detail =
+              error instanceof ZodError
+                ? error.issues
+                    .map(
+                      (issue) =>
+                        `${issue.path.join(".") || "input"}: ${issue.message}`,
+                    )
+                    .join("; ")
+                : error instanceof Error
+                  ? error.message
+                  : String(error);
+            throw new Error(
+              `Invalid input for ${operation.name}: ${detail}\n${renderOperationExamples(operation.name, operation.input)}\nUse tsk ${operation.name} --schema for the full input schema.`,
+            );
+          }
+          if (
+            args.format !== undefined &&
+            !["jsonl", "array"].includes(String(args.format))
+          ) {
+            throw new Error("--format must be jsonl or array");
+          }
           await confirmDestructiveOperation(operation.name, input, args.yes);
           const client = await resolveClient({
             profile: args.profile,
@@ -154,6 +216,24 @@ export function operationCommands() {
           });
           try {
             const result = await operation.execute(client, input);
+            if (operation.name === "documents.export" && args.format) {
+              if (typeof result !== "string")
+                throw new Error("Expected JSONL export");
+              const documents = result
+                .split("\n")
+                .filter((line) => line.trim())
+                .map((line) => JSON.parse(line));
+              console.log(
+                args.format === "array"
+                  ? render(documents, true)
+                  : documents
+                      .map((document) =>
+                        JSON.stringify(JSON.parse(render(document, true))),
+                      )
+                      .join("\n"),
+              );
+              return;
+            }
             console.log(
               render(
                 result,

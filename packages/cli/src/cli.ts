@@ -1,6 +1,7 @@
-import { defineCommand, runMain } from "citty";
+import { defineCommand } from "citty";
 import packageJson from "../package.json" with { type: "json" };
 import { type CompletionShell, renderCompletion } from "./completion.js";
+import { dispatch } from "./dispatch.js";
 import { listOperations, operationCommands } from "./operations.js";
 import { profileCommand } from "./profile/commands.js";
 import { renderSkill, type SkillTarget } from "./skills.js";
@@ -61,4 +62,4 @@ export const main = defineCommand({
   },
 });
 
-runMain(main);
+await dispatch(main, process.argv.slice(2), packageJson.version);

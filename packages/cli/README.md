@@ -61,3 +61,23 @@ MCP output remains redacted. New or updated Keychain-backed profiles use unique
 credential references, so profiles with the same name in separate config files
 do not overwrite each other's keys. Existing references remain readable; saving
 a legacy profile again with `--keychain` migrates it to a new reference.
+
+### Shell discovery and export formats
+
+Dotted commands also accept grouped paths: `tsk collections list --json` is
+an alias for `tsk collections.list --json`. Use `tsk collections --help` for
+only that group's operations. Operation help includes input fields and a runnable
+example; `--schema` still prints the complete JSON schema. Required string input
+fields can also be positional, for example `tsk collections.retrieve products
+--json`. Explicit `--input` values take precedence over positional values.
+
+Export keeps its existing JSON string output, including with `--json`. For direct
+shell processing, select an explicit format:
+
+```sh
+tsk documents.export --input '{"collection":"products"}' --format jsonl | jq -c .
+tsk documents.export --input '{"collection":"products"}' --format array | jq length
+```
+
+Errors print concise messages to stderr and return a nonzero exit status. Add
+`--debug` for diagnostic details and a stack trace.
