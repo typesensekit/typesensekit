@@ -27,11 +27,43 @@ const patchFieldSchema = baseFieldSchema.extend({
   drop: z.boolean().optional(),
 });
 
+const fieldFlagShape = {
+  facet: z
+    .boolean()
+    .optional()
+    .describe("Enable faceting (needed for facet_by). Default false."),
+  sort: z
+    .boolean()
+    .optional()
+    .describe(
+      "Enable sort_by on this field. Numeric fields sort by default; strings default false.",
+    ),
+  index: z
+    .boolean()
+    .optional()
+    .describe(
+      "Index the field for search/filter/facet/sort. Default true; false = stored only.",
+    ),
+  optional: z
+    .boolean()
+    .optional()
+    .describe("Allow documents without this field. Default false."),
+  infix: z.boolean().optional().describe("Enable infix search."),
+  stem: z.boolean().optional().describe("Enable stemming."),
+  locale: z.string().optional().describe("Language locale, e.g. `ja`."),
+};
+
 const fieldLifecycleInputSchema = z
   .object({
-    collection: z.string(),
-    field: z.string().optional(),
-    type: z.string().optional(),
+    collection: z.string().describe("Collection name."),
+    field: z.string().optional().describe("Field name."),
+    type: z
+      .string()
+      .optional()
+      .describe(
+        "Typesense field type: string, int32, int64, float, bool, string[], ... collections.fields.replace defaults to the existing type.",
+      ),
+    ...fieldFlagShape,
     yes: z.boolean().optional(),
     numDim: z.coerce.number().int().positive().optional(),
     vecDist: z.string().optional(),
@@ -101,7 +133,9 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function requestedFieldName(input: FieldLifecycleInput): string {
   const name = input.field ?? input.name;
   if (typeof name !== "string" || !name) {
-    throw new Error("A field name is required. Pass --field or include name.");
+    throw new Error(
+      "A field name is required. Pass field (CLI: --field) or include name.",
+    );
   }
   return name;
 }
@@ -178,7 +212,9 @@ function buildFieldDefinition(input: FieldLifecycleInput): FieldDefinition {
   }
 
   if (typeof field.type !== "string" || !field.type) {
-    throw new Error("A field type is required. Pass --type or include type.");
+    throw new Error(
+      "A field type is required. Pass type (CLI: --type), e.g. string, int32, float, bool, string[].",
+    );
   }
 
   return field;
@@ -216,7 +252,7 @@ function evaluateWaitCondition(collection: CollectionSchema, input: WaitInput) {
 
   if (conditions.length !== 1) {
     throw new Error(
-      "Pass exactly one wait condition: --field-present, --field-missing, or --field-embed-from.",
+      "Pass exactly one wait condition: fieldPresent, fieldMissing, or fieldEmbedFrom (CLI: --field-present, --field-missing, --field-embed-from). Schema operations in this toolkit already wait for their changes, so a separate wait is rarely needed.",
     );
   }
 
@@ -341,6 +377,8 @@ export const collectionOperations = [
   {
     name: "collections.create",
     summary: "Create a collection",
+    description:
+      "Create a collection from a schema: name, fields [{name, type, facet?, sort?, index?, optional?}], optional default_sorting_field. Field types: string, int32, int64, float, bool, string[], int32[], float[], object, geopoint, auto.",
     category: "collections",
     input: z.object({
       name: z.string(),
@@ -355,6 +393,8 @@ export const collectionOperations = [
   {
     name: "collections.list",
     summary: "List collections",
+    description:
+      "List every collection with its full schema: fields (type and facet/sort/index/optional flags), num_documents, default_sorting_field, and linked synonym_sets/curation_sets. One call usually covers all schema discovery; use aliases.list to resolve alias names.",
     category: "collections",
     input: z.object({}),
     execute: async (client) => api(client).get("/collections"),
@@ -362,6 +402,8 @@ export const collectionOperations = [
   {
     name: "collections.retrieve",
     summary: "Retrieve a collection",
+    description:
+      "Get one collection's full schema and num_documents (accepts an alias). collections.list already returns this for every collection.",
     category: "collections",
     input: z.object({ collection: z.string() }),
     execute: async (client, input) =>
@@ -370,6 +412,8 @@ export const collectionOperations = [
   {
     name: "collections.update",
     summary: "Update a collection schema",
+    description:
+      "Patch a collection schema: add new fields ({name, type, ...}) or drop fields ({name, drop: true}). Typesense cannot change an existing field in place (error: already part of the schema): to change facet/sort/index/optional/type of an existing field, use collections.fields.replace.",
     category: "collections",
     input: z.object({
       collection: z.string(),
@@ -383,6 +427,8 @@ export const collectionOperations = [
   {
     name: "collections.wait",
     summary: "Wait for a collection schema condition",
+    description:
+      "Poll until a schema condition holds: exactly one of fieldPresent, fieldMissing, or fieldEmbedFrom (FIELD:SOURCE). The collections.fields.* tools already wait for their own changes.",
     category: "collections",
     input: waitInputSchema,
     execute: waitForCollectionCondition,
@@ -390,6 +436,8 @@ export const collectionOperations = [
   {
     name: "collections.fields.add",
     summary: "Add a field to a collection",
+    description:
+      "Add one field to an existing collection: field, type, and flags (facet, sort, index, optional, ...). Existing documents are indexed for the new field from their stored values.",
     category: "collections",
     input: fieldLifecycleInputSchema,
     execute: addField,
@@ -397,6 +445,8 @@ export const collectionOperations = [
   {
     name: "collections.fields.drop",
     summary: "Drop a field from a collection",
+    description:
+      "Drop one field from a collection schema (documents keep their stored values; the field is just no longer indexed).",
     category: "collections",
     input: fieldLifecycleInputSchema,
     execute: dropField,
@@ -404,11 +454,23 @@ export const collectionOperations = [
   {
     name: "collections.fields.replace",
     summary: "Safely replace a collection field",
+    description:
+      "Change an existing field's definition (e.g. make it facetable, sortable, indexed or optional): drops the field and re-adds it with exactly the flags you pass (omitted flags revert to defaults; type defaults to the current type), then waits until it is applied. Typesense re-indexes the stored values, so no export/import is needed. Returns before/after definitions.",
     category: "collections",
     input: fieldLifecycleInputSchema,
     execute: async (client, input) => {
       const fieldName = requestedFieldName(input);
-      const replacement = buildFieldDefinition(input);
+      let definition = input;
+      if (input.type === undefined) {
+        const existing = findField(
+          await retrieveCollection(client, input.collection),
+          fieldName,
+        );
+        if (isObject(existing) && typeof existing.type === "string") {
+          definition = { ...input, type: existing.type };
+        }
+      }
+      const replacement = buildFieldDefinition(definition);
       const dropResult = await dropField(client, input);
 
       await waitForCollectionCondition(client, {
@@ -454,6 +516,7 @@ export const collectionOperations = [
   {
     name: "collections.delete",
     summary: "Delete a collection",
+    description: "Permanently delete a collection and all its documents.",
     category: "collections",
     input: z.object({ collection: z.string() }),
     execute: async (client, input) =>

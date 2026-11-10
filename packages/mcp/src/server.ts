@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   createClient,
   formatTypesenseErrorMessage,
+  operationDescription,
   operations,
   redactSecrets,
 } from "@typesensekit/core";
@@ -13,6 +14,7 @@ import {
   type McpExecutionController,
   sharedMcpExecutionController,
 } from "./execution.js";
+import { formatMcpError, serverInstructions } from "./guidance.js";
 import { filterMcpOperations } from "./read-only.js";
 import { registerTypesenseResources } from "./resources.js";
 import { operationToolAnnotations } from "./tool-metadata.js";
@@ -26,12 +28,15 @@ export type TypesenseMcpServerOptions = {
 export function createTypesenseMcpServer(
   options: TypesenseMcpServerOptions = {},
 ) {
-  const server = new McpServer({
-    name: "typesensekit",
-    version: packageJson.version,
-  });
-  const client = createClient(readEnvConfig());
   const mcpOptions = { ...readMcpOptions(), ...options };
+  const server = new McpServer(
+    {
+      name: "typesensekit",
+      version: packageJson.version,
+    },
+    { instructions: serverInstructions(mcpOptions.readOnly) },
+  );
+  const client = createClient(readEnvConfig());
   const execution =
     options.executionController ?? sharedMcpExecutionController();
   const audit = options.auditLogger ?? createMcpAuditLogger();
@@ -51,7 +56,7 @@ export function createTypesenseMcpServer(
       operation.name,
       {
         title: operation.name,
-        description: operation.summary,
+        description: operationDescription(operation),
         inputSchema: operation.input,
         outputSchema: { result: z.unknown() },
         annotations: operationToolAnnotations(operation),
@@ -93,7 +98,11 @@ export function createTypesenseMcpServer(
             durationMs: Date.now() - startedAt,
             errorName: error instanceof Error ? error.name : "UnknownError",
           });
-          const message = formatTypesenseErrorMessage(error);
+          const message = formatMcpError(formatTypesenseErrorMessage(error), {
+            operation: operation.name,
+            input: args,
+            readOnly: mcpOptions.readOnly,
+          });
           return { isError: true, content: [{ type: "text", text: message }] };
         }
       },

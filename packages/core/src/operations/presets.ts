@@ -6,6 +6,8 @@ export const presetsOperations = [
   {
     name: "presets.list",
     summary: "List presets",
+    description:
+      "List all presets (saved search parameter sets) with their values.",
     category: "presets",
     input: z.object({}),
     execute: async (client) => api(client).get("/presets"),
@@ -13,6 +15,8 @@ export const presetsOperations = [
   {
     name: "presets.create",
     summary: "Create or upsert a preset",
+    description:
+      "Create or replace a preset: value is an object of search parameters (e.g. {query_by, filter_by, sort_by}). Replaces the whole value, so include every parameter you want to keep.",
     category: "presets",
     input: z.object({
       name: z.string(),
@@ -26,6 +30,7 @@ export const presetsOperations = [
   {
     name: "presets.retrieve",
     summary: "Retrieve a preset",
+    description: "Get one preset's stored search parameters (value).",
     category: "presets",
     input: z.object({ name: z.string() }),
     execute: async (client, input) =>

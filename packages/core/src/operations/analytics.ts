@@ -6,6 +6,7 @@ export const analyticsOperations = [
   {
     name: "analytics.rules.list",
     summary: "List analytics rules",
+    description: "List analytics rules (optionally by ruleTag).",
     category: "analytics",
     input: z.object({ ruleTag: z.string().optional() }),
     execute: async (client, input) =>
@@ -46,6 +47,7 @@ export const analyticsOperations = [
   {
     name: "analytics.rules.retrieve",
     summary: "Retrieve an analytics rule",
+    description: "Get one analytics rule.",
     category: "analytics",
     input: z.object({ name: z.string() }),
     execute: async (client, input) =>
@@ -66,6 +68,7 @@ export const analyticsOperations = [
   {
     name: "analytics.events.list",
     summary: "Retrieve recent analytics events for a user and rule",
+    description: "List recent analytics events for a user and rule name.",
     category: "analytics",
     input: z.object({
       userId: z.string().min(1),
@@ -89,6 +92,7 @@ export const analyticsOperations = [
   {
     name: "analytics.status",
     summary: "Retrieve analytics subsystem status",
+    description: "Get analytics subsystem status.",
     category: "analytics",
     input: z.object({}),
     execute: async (client) => api(client).get("/analytics/status"),

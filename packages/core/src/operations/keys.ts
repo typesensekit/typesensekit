@@ -6,6 +6,7 @@ export const keysOperations = [
   {
     name: "keys.list",
     summary: "List API keys",
+    description: "List API keys (values are truncated prefixes).",
     category: "keys",
     input: z.object({}),
     execute: async (client) => api(client).get("/keys"),
@@ -13,6 +14,8 @@ export const keysOperations = [
   {
     name: "keys.create",
     summary: "Create an API key",
+    description:
+      'Create an API key: value {description, actions (e.g. ["documents:search"]), collections (names or ["*"]), expires_at?}. The full key is returned only once.',
     category: "keys",
     input: z.object({ value: z.record(z.unknown()) }),
     execute: async (client, input) => api(client).post("/keys", input.value),
