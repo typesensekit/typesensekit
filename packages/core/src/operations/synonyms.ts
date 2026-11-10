@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, collectionPath, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 type CollectionSchema = {
   synonym_sets?: unknown;
@@ -70,7 +70,7 @@ export const synonymsOperations = [
     input: z.object({
       collection: z.string(),
       name: z.string(),
-      value: z.record(z.unknown()),
+      value: z.record(z.string(), z.unknown()),
     }),
     execute: async (client, input) =>
       api(client).put(
@@ -102,4 +102,4 @@ export const synonymsOperations = [
         `${collectionPath(input.collection)}/synonyms/${enc(input.name)}`,
       ),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

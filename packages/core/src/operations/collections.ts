@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { fieldSummary, textFieldNames } from "./field-summary.js";
 import { api, collectionPath } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 const DEFAULT_WAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_WAIT_INTERVAL_MS = 1_000;
@@ -603,4 +603,4 @@ export const collectionOperations = [
     execute: async (client, input) =>
       api(client).delete(collectionPath(input.collection)),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

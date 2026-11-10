@@ -1,5 +1,4 @@
-import type { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
 
 type JsonValue =
   | string
@@ -240,9 +239,14 @@ const schemaCache = new WeakMap<z.ZodTypeAny, JsonSchemaLike>();
 export function inputObjectSchema(input: z.ZodTypeAny): JsonSchemaLike {
   const cached = schemaCache.get(input);
   if (cached) return cached;
-  const schema = zodToJsonSchema(input, {
-    $refStrategy: "none",
-    target: "jsonSchema7",
+  // Zod 4's built-in converter (replaces zod-to-json-schema, which does not
+  // support Zod 4). `io: "input"` documents what callers may send (defaults
+  // and coercions apply on parse); unrepresentable types become {}.
+  const schema = z.toJSONSchema(input, {
+    target: "draft-7",
+    io: "input",
+    reused: "inline",
+    unrepresentable: "any",
   }) as JsonSchemaLike;
   schemaCache.set(input, schema);
   return schema;

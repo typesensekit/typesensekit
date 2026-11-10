@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 export const systemOperations = [
   {
@@ -84,4 +84,4 @@ export const systemOperations = [
     input: z.object({}),
     execute: async (client) => api(client).get("/debug"),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

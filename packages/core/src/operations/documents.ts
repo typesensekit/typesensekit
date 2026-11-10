@@ -7,9 +7,9 @@ import {
   FILTER_BY_HELP,
   searchParamsSchema,
 } from "./search-params.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
-const documentSchema = z.record(z.unknown());
+const documentSchema = z.record(z.string(), z.unknown());
 const MAX_BATCH_SIZE = 100;
 const BATCH_CONCURRENCY = 8;
 const idsSchema = z.array(z.string().min(1)).min(1).max(MAX_BATCH_SIZE);
@@ -279,4 +279,4 @@ export const documentOperations = [
         { filter_by: input.filterBy },
       ),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

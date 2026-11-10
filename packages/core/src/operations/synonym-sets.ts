@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 function base(name?: string): string {
   return name ? `/synonym_sets/${enc(name)}` : "/synonym_sets";
@@ -30,7 +30,7 @@ export const synonymSetOperations = [
     input: z.object({
       name: z.string(),
       value: z.object({
-        items: z.array(z.record(z.unknown())),
+        items: z.array(z.record(z.string(), z.unknown())),
       }),
     }),
     execute: async (client, input) =>
@@ -68,7 +68,7 @@ export const synonymSetOperations = [
     input: z.object({
       name: z.string(),
       id: z.string(),
-      value: z.record(z.unknown()),
+      value: z.record(z.string(), z.unknown()),
     }),
     execute: async (client, input) =>
       api(client).put(itemPath(input.name, input.id), input.value),
@@ -90,4 +90,4 @@ export const synonymSetOperations = [
     execute: async (client, input) =>
       api(client).delete(itemPath(input.name, input.id)),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

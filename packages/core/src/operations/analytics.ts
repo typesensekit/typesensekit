@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 export const analyticsOperations = [
   {
@@ -21,8 +21,8 @@ export const analyticsOperations = [
     category: "analytics",
     input: z.object({
       value: z.union([
-        z.record(z.unknown()),
-        z.array(z.record(z.unknown())).min(1),
+        z.record(z.string(), z.unknown()),
+        z.array(z.record(z.string(), z.unknown())).min(1),
       ]),
     }),
     execute: async (client, input) =>
@@ -32,7 +32,10 @@ export const analyticsOperations = [
     name: "analytics.rules.upsert",
     summary: "Create or update an analytics rule",
     category: "analytics",
-    input: z.object({ name: z.string(), value: z.record(z.unknown()) }),
+    input: z.object({
+      name: z.string(),
+      value: z.record(z.string(), z.unknown()),
+    }),
     execute: async (client, input) =>
       api(client).put(`/analytics/rules/${enc(input.name)}`, input.value),
   },
@@ -60,7 +63,7 @@ export const analyticsOperations = [
     input: z.object({
       type: z.string(),
       name: z.string(),
-      data: z.record(z.unknown()),
+      data: z.record(z.string(), z.unknown()),
     }),
     execute: async (client, input) =>
       api(client).post("/analytics/events", input),
@@ -96,4 +99,4 @@ export const analyticsOperations = [
     input: z.object({}),
     execute: async (client) => api(client).get("/analytics/status"),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

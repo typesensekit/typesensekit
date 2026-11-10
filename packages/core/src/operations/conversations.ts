@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 export const conversationOperations = [
   {
@@ -15,7 +15,7 @@ export const conversationOperations = [
     name: "conversations.models.create",
     summary: "Create a conversation model",
     category: "conversations",
-    input: z.object({ value: z.record(z.unknown()) }),
+    input: z.object({ value: z.record(z.string(), z.unknown()) }),
     execute: async (client, input) =>
       api(client).post("/conversations/models", input.value),
   },
@@ -51,4 +51,4 @@ export const conversationOperations = [
           : undefined,
       ),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

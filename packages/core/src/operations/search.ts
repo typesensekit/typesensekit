@@ -8,7 +8,7 @@ import {
   searchParamsSchema,
   takeCompactFlag,
 } from "./search-params.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 const searchParams = searchParamsSchema(
   () => z.unknown(),
@@ -67,12 +67,12 @@ export const searchOperations = [
     category: "search",
     input: z.object({
       searches: z
-        .array(z.record(z.unknown()))
+        .array(z.record(z.string(), z.unknown()))
         .describe(
           "Search parameter objects, each with `collection` plus snake_case Typesense search parameters.",
         ),
       commonParams: z
-        .record(z.unknown())
+        .record(z.string(), z.unknown())
         .optional()
         .describe("Search parameters applied to every search."),
       compact: compactSchema,
@@ -187,4 +187,4 @@ export const searchOperations = [
         }),
       ),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

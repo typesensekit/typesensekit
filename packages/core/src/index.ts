@@ -13,6 +13,7 @@ export {
 } from "./errors.js";
 export { isDestructiveOperation } from "./operation-safety.js";
 export {
+  type AnyZod,
   collectionFieldsHint,
   compactSearchResult,
   FILTER_BY_HELP,

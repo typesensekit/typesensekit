@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 const modelConfigSchema = z
   .object({
@@ -71,4 +71,4 @@ export const nlSearchModelOperations = [
     input: z.object({ id: z.string().min(1) }),
     execute: async (client, input) => api(client).delete(modelPath(input.id)),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

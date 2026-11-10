@@ -28,7 +28,7 @@
     "@biomejs/biome": "^2.5.13",
     "@changesets/cli": "^2.31.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   },
   "description": "CLI and MCP server for the Typesense API.",
   "license": "MIT",

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 const wordMappingSchema = z.object({
   word: z.string().min(1),
@@ -47,4 +47,4 @@ export const stemmingOperations = [
         { "Content-Type": "text/plain" },
       ),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, enc } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 export const aliasesOperations = [
   {
@@ -42,4 +42,4 @@ export const aliasesOperations = [
     execute: async (client, input) =>
       api(client).delete(`/aliases/${enc(input.name)}`),
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];

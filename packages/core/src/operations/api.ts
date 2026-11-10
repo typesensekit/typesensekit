@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api } from "./http.js";
-import type { Operation } from "./types.js";
+import type { AnyZod, Operation } from "./types.js";
 
 const methodSchema = z.enum(["get", "post", "put", "patch", "delete"]);
 const normalizedMethodSchema = z.preprocess(
@@ -17,7 +17,7 @@ export const apiOperations = [
     input: z.object({
       method: normalizedMethodSchema,
       path: z.string().startsWith("/"),
-      params: z.record(z.unknown()).optional(),
+      params: z.record(z.string(), z.unknown()).optional(),
       body: z.unknown().optional(),
     }),
     execute: async (client, input) => {
@@ -32,4 +32,4 @@ export const apiOperations = [
       return request.patch(input.path, input.body, input.params);
     },
   },
-] satisfies Operation<z.ZodTypeAny, unknown>[];
+] satisfies Operation<AnyZod, unknown>[];
