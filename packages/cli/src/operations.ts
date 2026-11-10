@@ -195,7 +195,7 @@ function parseJsonValue(value: string): unknown {
   }
 }
 
-/** Required string inputs, in schema order, that may be given positionally. */
+/** Required string inputs (including string/number IDs), in schema order. */
 export function positionalKeys(operationName: string): string[] {
   const operation = operations.find((entry) => entry.name === operationName);
   if (!operation) return [];
@@ -203,7 +203,12 @@ export function positionalKeys(operationName: string): string[] {
   return Object.entries(schema.properties ?? {})
     .filter(
       ([key, value]) =>
-        value.type === "string" &&
+        (value.type === "string" ||
+          (Array.isArray(value.type) &&
+            value.type.includes("string") &&
+            value.type.every(
+              (type) => type === "string" || type === "number",
+            ))) &&
         schema.required?.includes(key) &&
         !(key in operationSpecificArgs(operationName)),
     )
@@ -361,7 +366,9 @@ export function operationCommands() {
       operation.name,
       defineCommand({
         meta: { name: operation.name, description: operation.summary },
-        args: {
+        // Citty resolves args only for the selected command. Avoid converting
+        // all operation schemas to JSON Schema on every process startup.
+        args: () => ({
           ...Object.fromEntries(
             positionalKeys(operation.name).map((key) => [
               key,
@@ -373,7 +380,7 @@ export function operationCommands() {
             ]),
           ),
           ...baseArgs(operation.name),
-        },
+        }),
         async run({ args, rawArgs }) {
           if (args.schema) {
             console.log(renderInputSchema(operation.input));

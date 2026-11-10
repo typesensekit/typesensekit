@@ -37,6 +37,13 @@ it("shows focused help with usable inputs and output format instructions", () =>
   expect(groupHelp("aliases")).not.toContain("documents.search");
   expect(operationHelp("search")).toContain('"params":');
   expect(operationHelp("documents.export")).toContain("--format jsonl");
+  expect(operationHelp("keys.retrieve")).toContain("<id>");
+  expect(operationHelp("synonym_sets.items.create")).toContain(
+    '"value":{"synonyms":["sofa","couch"]}',
+  );
+  expect(groupHelp()).toContain("presets create <name> --value");
+  expect(groupHelp()).toContain("omitted flags reset to defaults");
+  expect(groupHelp()).toContain("> backup.jsonl (working directory)");
   expect(operationHelp("collections.retrieve")).toContain(
     "collection (string, required, positional)",
   );

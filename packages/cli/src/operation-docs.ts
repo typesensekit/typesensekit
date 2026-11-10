@@ -73,7 +73,7 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   ],
   "collections.fields.drop": [{ collection: "products", field: "old_title" }],
   "collections.fields.replace": [
-    { collection: "products", field: "title", type: "string", optional: true },
+    { collection: "products", field: "brand", type: "string", facet: true },
   ],
   "collections.wait": [
     {
@@ -100,6 +100,26 @@ const EXAMPLES: Record<string, JsonValue[]> = {
     {
       collection: "products",
       document: { id: "sku-1", title: "Lounge chair" },
+    },
+  ],
+  "documents.update": [
+    { collection: "products", id: "sku-1", document: { price: 29.99 } },
+  ],
+  "curation_sets.items.upsert": [
+    {
+      name: "products-core",
+      id: "featured-chair",
+      value: {
+        rule: { query: "chair", match: "exact" },
+        includes: [{ id: "sku-1", position: 1 }],
+      },
+    },
+  ],
+  "synonym_sets.items.create": [
+    {
+      name: "products-core",
+      id: "sofa-couch",
+      value: { synonyms: ["sofa", "couch"] },
     },
   ],
   "documents.get_many": [
@@ -215,11 +235,17 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   ],
 };
 
+const schemaCache = new WeakMap<z.ZodTypeAny, JsonSchemaLike>();
+
 export function inputObjectSchema(input: z.ZodTypeAny): JsonSchemaLike {
-  return zodToJsonSchema(input, {
+  const cached = schemaCache.get(input);
+  if (cached) return cached;
+  const schema = zodToJsonSchema(input, {
     $refStrategy: "none",
     target: "jsonSchema7",
   }) as JsonSchemaLike;
+  schemaCache.set(input, schema);
+  return schema;
 }
 
 export function renderInputSchema(input: z.ZodTypeAny): string {
