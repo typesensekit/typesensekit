@@ -34,6 +34,8 @@ export const nlSearchModelOperations = [
   {
     name: "nl_search_models.list",
     summary: "List natural language search models",
+    description:
+      "List natural-language search models (LLM configs for nl_query).",
     category: "nl_search_models",
     input: z.object({}),
     execute: async (client) => api(client).get("/nl_search_models"),
@@ -49,6 +51,7 @@ export const nlSearchModelOperations = [
   {
     name: "nl_search_models.retrieve",
     summary: "Retrieve a natural language search model",
+    description: "Get one natural-language search model by id.",
     category: "nl_search_models",
     input: z.object({ id: z.string().min(1) }),
     execute: async (client, input) => api(client).get(modelPath(input.id)),

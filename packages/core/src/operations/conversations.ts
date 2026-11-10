@@ -6,6 +6,7 @@ export const conversationOperations = [
   {
     name: "conversations.models.list",
     summary: "List conversation models",
+    description: "List conversational search (RAG) models.",
     category: "conversations",
     input: z.object({}),
     execute: async (client) => api(client).get("/conversations/models"),
@@ -21,6 +22,7 @@ export const conversationOperations = [
   {
     name: "conversations.models.retrieve",
     summary: "Retrieve a conversation model",
+    description: "Get one conversational search (RAG) model by id.",
     category: "conversations",
     input: z.object({ id: z.string() }),
     execute: async (client, input) =>
@@ -37,6 +39,8 @@ export const conversationOperations = [
   {
     name: "conversations.history.retrieve",
     summary: "Retrieve conversation history",
+    description:
+      "Get the stored history of one conversation by conversation_id.",
     category: "conversations",
     input: z.object({ conversation_id: z.string().optional() }),
     execute: async (client, input) =>

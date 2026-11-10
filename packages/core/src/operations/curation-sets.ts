@@ -15,6 +15,8 @@ export const curationSetOperations = [
   {
     name: "curation_sets.list",
     summary: "List global curation sets",
+    description:
+      "List all global curation sets (Typesense v30+; formerly overrides) with their rules: pinned hits (includes), hidden hits (excludes), filters, for queries matching rule.query. A collection uses the sets named in its schema's `curation_sets`.",
     category: "curations",
     input: z.object({}),
     execute: async (client) => api(client).get(base()),
@@ -33,6 +35,7 @@ export const curationSetOperations = [
   {
     name: "curation_sets.retrieve",
     summary: "Retrieve a global curation set",
+    description: "Get one global curation set with all its rules.",
     category: "curations",
     input: z.object({ name: z.string() }),
     execute: async (client, input) => api(client).get(base(input.name)),
@@ -47,6 +50,7 @@ export const curationSetOperations = [
   {
     name: "curation_sets.items.list",
     summary: "List items in a global curation set",
+    description: "List the rules in one global curation set.",
     category: "curations",
     input: z.object({ name: z.string() }),
     execute: async (client, input) => api(client).get(itemPath(input.name)),
@@ -54,6 +58,8 @@ export const curationSetOperations = [
   {
     name: "curation_sets.items.upsert",
     summary: "Create or update an item in a global curation set",
+    description:
+      "Add or replace one curation rule: value {rule: {query, match: exact|contains}, includes: [{id, position}], excludes: [{id}], ...}.",
     category: "curations",
     input: z.object({
       name: z.string(),
@@ -66,6 +72,8 @@ export const curationSetOperations = [
   {
     name: "curation_sets.items.retrieve",
     summary: "Retrieve an item in a global curation set",
+    description:
+      "Get one rule (query match, includes, excludes) from a global curation set.",
     category: "curations",
     input: z.object({ name: z.string(), id: z.string() }),
     execute: async (client, input) =>
@@ -74,6 +82,8 @@ export const curationSetOperations = [
   {
     name: "curation_sets.items.delete",
     summary: "Delete an item in a global curation set",
+    description:
+      "Delete one rule from a global curation set (e.g. to stop pinning or hiding a document).",
     category: "curations",
     input: z.object({ name: z.string(), id: z.string() }),
     execute: async (client, input) =>

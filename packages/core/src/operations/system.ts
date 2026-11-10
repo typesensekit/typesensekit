@@ -6,6 +6,7 @@ export const systemOperations = [
   {
     name: "operations.schema_changes",
     summary: "List in-progress collection schema changes",
+    description: "List collection schema changes that are still being applied.",
     category: "system",
     input: z.object({}),
     execute: async (client) => api(client).get("/operations/schema_changes"),
@@ -54,6 +55,7 @@ export const systemOperations = [
   {
     name: "health",
     summary: "Check Typesense cluster health",
+    description: "Check whether the Typesense cluster is healthy ({ok: true}).",
     category: "system",
     input: z.object({}),
     execute: async (client) => api(client).get("/health"),
@@ -61,6 +63,7 @@ export const systemOperations = [
   {
     name: "metrics",
     summary: "Retrieve Typesense metrics",
+    description: "Get server resource metrics (CPU, memory, disk).",
     category: "system",
     input: z.object({}),
     execute: async (client) => api(client).get("/metrics.json"),
@@ -68,6 +71,7 @@ export const systemOperations = [
   {
     name: "stats",
     summary: "Retrieve Typesense stats",
+    description: "Get request rate and latency statistics per endpoint.",
     category: "system",
     input: z.object({}),
     execute: async (client) => api(client).get("/stats.json"),
@@ -75,6 +79,7 @@ export const systemOperations = [
   {
     name: "debug",
     summary: "Retrieve Typesense debug info",
+    description: "Get Typesense version and node state.",
     category: "system",
     input: z.object({}),
     execute: async (client) => api(client).get("/debug"),

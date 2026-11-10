@@ -11,6 +11,7 @@ export const stemmingOperations = [
   {
     name: "stemming.dictionaries.list",
     summary: "List stemming dictionaries",
+    description: "List the ids of custom stemming dictionaries.",
     category: "stemming",
     input: z.object({}),
     execute: async (client) => api(client).get("/stemming/dictionaries"),
@@ -18,6 +19,7 @@ export const stemmingOperations = [
   {
     name: "stemming.dictionaries.retrieve",
     summary: "Retrieve a stemming dictionary",
+    description: "Get one stemming dictionary's word-to-root mappings.",
     category: "stemming",
     input: z.object({ id: z.string().min(1) }),
     execute: async (client, input) =>

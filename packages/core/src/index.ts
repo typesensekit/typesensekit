@@ -12,5 +12,10 @@ export {
   normalizeTypesenseError,
 } from "./errors.js";
 export { isDestructiveOperation } from "./operation-safety.js";
-export { type Operation, operations } from "./operations/index.js";
+export {
+  compactSearchResult,
+  type Operation,
+  operationDescription,
+  operations,
+} from "./operations/index.js";
 export { redactSecrets } from "./redaction.js";

@@ -37,4 +37,15 @@ export const operations = [
   ...systemOperations,
 ] satisfies Operation<import("zod").ZodTypeAny, unknown>[];
 
+export function operationDescription(operation: {
+  summary: string;
+  description?: string;
+}): string {
+  return operation.description ?? operation.summary;
+}
+
+export {
+  compactSearchResult,
+  searchParamsSchema,
+} from "./search-params.js";
 export type { Operation } from "./types.js";
