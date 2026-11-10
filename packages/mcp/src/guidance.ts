@@ -4,30 +4,18 @@
  */
 
 const SHARED_INSTRUCTIONS = [
-  "TypesenseKit gives you Typesense tools. Tool names use dots (some clients show them with underscores, e.g. collections_list).",
-  "",
-  "Discovery",
-  "- Don't guess collection or field names. collections.list returns every collection's full schema (field types, facet/sort/index flags, num_documents, linked synonym_sets and curation_sets) in one call; aliases.list maps alias names to collections. Tools accept alias names wherever they take a collection. Users often refer to data by its alias name, so when their wording matches an alias, answer for that alias's collection.",
-  "",
-  "Searching (search; documents.search is the same tool)",
-  "- params are Typesense search parameters in snake_case: q, query_by, filter_by, sort_by, facet_by, per_page, page, include_fields, group_by.",
-  "- q: '*' matches everything and needs no query_by. Any other q needs query_by (string fields).",
-  "- `found` is the total match count; hits hold one page (default 10, max per_page 250). For counts use per_page: 0. For more than 250 hits, page through or narrow with filter_by.",
-  "- filter_by: field:=value (exact), field:[a,b] (any of), price:<100, year:[1990..1999] (range), && / ||. Backtick-quote values containing spaces or special characters such as & , ( ): brand:=`Smith & Co`.",
-  "- Facets: only the top 10 values per field come back unless you set max_facet_values (search) or maxFacetValues (search.facets). Numeric facet fields also return stats: min, max, sum and avg over every matching document (stats.total_values is just the number of distinct values), which answers totals and averages exactly without reading documents.",
-  "- Results include synonym expansion and curation rules (pinned or hidden hits). To see raw matches, set enable_synonyms: false or enable_overrides: false.",
-  "- Full hits carry highlight and scoring metadata (~0.5 KB per hit). When reading more than a few hits, set compact: true and include_fields so large pages fit in your context. Use multi_search to run several independent searches in one call.",
-  "",
-  "Synonyms and curation",
-  "- On Typesense v30+, synonyms and curation rules live in global synonym_sets and curation_sets, linked from each collection's schema. The synonyms.* and overrides.* tools are legacy (Typesense v29 and earlier).",
+  "Typesense tools use dotted names (some clients show underscores).",
+  "Discovery: start with collections.list {compact:true} for collection names, counts, field types/flags, linked sets and aliases in one call. Use collections.retrieve for full schema details. All collection arguments accept aliases; match the user's alias when present.",
+  "Search: prefer search (documents.search is an alias), compact:true and include_fields unless you need highlights/scores. params use snake_case. q:'*' matches all; other queries need query_by string fields. found is total matches, hits one page (default 10, per_page max 250); use per_page:0 for counts/facets, page for more hits. multi_search batches independent searches.",
+  "filter_by: exact field:=value, list field:[a,b], range year:[1990..1999], comparisons, &&/||. Backtick-quote spaces/special characters: brand:=`Smith & Co`.",
+  "Facets require facet:true. max_facet_values (maxFacetValues in search.facets) defaults to 10; raise for all values. Numeric facet stats min/max/sum/avg cover every matching document; total_values counts distinct values only. Use facets/group_by instead of dumping documents for aggregates.",
+  "Synonym expansion and pinned/hidden hits apply by default; disable with enable_synonyms:false / enable_overrides:false for raw matches. On v30+, use global synonym_sets/curation_sets linked in collection schemas; synonyms/overrides tools are legacy v29.",
 ];
 
 const WRITE_INSTRUCTIONS = [
-  "",
-  "Changing data and schemas",
-  "- Typesense cannot modify an existing field in place. To change a field's facet, sort, index, optional or type setting, use collections.fields.replace with the full desired definition. Stored values are re-indexed, so no export or re-import is needed. Use collections.update only to add new fields or drop fields.",
-  "- Bulk changes: documents.delete_by_filter and documents.update_by_filter change every match in one call; documents.import loads many documents at once; documents.copy copies documents between collections on the server (e.g. reindexing into a new schema before repointing an alias), so you never have to re-send them.",
-  "- presets.create and synonym_sets.create replace the whole value. To add one rule, use synonym_sets.items.create or curation_sets.items.upsert.",
+  "Schema changes: collections.fields.replace changes existing facet/sort/index/optional/type flags. Pass the full desired definition (omitted flags reset); type defaults to existing. Stored values are re-indexed without export/import. collections.update only adds/drops fields.",
+  "Bulk: documents.delete_by_filter/update_by_filter affect all matches; documents.import loads batches; documents.copy copies between collections server-side for reindexing before repointing aliases.",
+  "presets.create and synonym_sets.create replace whole values. Add individual rules with synonym_sets.items.create / curation_sets.items.upsert.",
 ];
 
 const READ_ONLY_NOTE = [

@@ -261,3 +261,71 @@ describe("collection operations", () => {
     ).rejects.toThrow("fieldPresent, fieldMissing, or fieldEmbedFrom");
   });
 });
+
+it("keeps collection listing unchanged unless compact discovery is requested", async () => {
+  const operation = getOperation("collections.list");
+  const collections = [
+    {
+      name: "inventory",
+      num_documents: 9,
+      created_at: 123,
+      default_sorting_field: "price",
+      synonym_sets: ["terms"],
+      curation_sets: ["rules"],
+      fields: [
+        {
+          name: "price",
+          type: "float",
+          facet: true,
+          sort: true,
+          index: true,
+          optional: false,
+          locale: "",
+          infix: false,
+        },
+      ],
+    },
+  ];
+  const aliases = {
+    aliases: [{ name: "catalog", collection_name: "inventory" }],
+  };
+  const get = vi
+    .fn()
+    .mockImplementation(async (path: string) =>
+      path === "/aliases" ? aliases : collections,
+    );
+  const client = { apiCall: { get } } as unknown as TypesenseClient;
+  for (const args of [{}, { compact: false }]) {
+    await expect(
+      operation.execute(client, operation.input.parse(args)),
+    ).resolves.toBe(collections);
+  }
+  expect(get).not.toHaveBeenCalledWith("/aliases");
+  const result = await operation.execute(
+    client,
+    operation.input.parse({ compact: true }),
+  );
+  expect(result).toEqual({
+    collections: [
+      {
+        name: "inventory",
+        num_documents: 9,
+        default_sorting_field: "price",
+        synonym_sets: ["terms"],
+        curation_sets: ["rules"],
+        fields: [
+          {
+            name: "price",
+            type: "float",
+            facet: true,
+            sort: true,
+            index: true,
+            optional: false,
+          },
+        ],
+      },
+    ],
+    aliases: aliases.aliases,
+  });
+  expect(collections[0]?.fields[0]).toHaveProperty("infix", false);
+});

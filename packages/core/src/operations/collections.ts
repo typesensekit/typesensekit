@@ -28,26 +28,19 @@ const patchFieldSchema = baseFieldSchema.extend({
 });
 
 const fieldFlagShape = {
-  facet: z
-    .boolean()
-    .optional()
-    .describe("Enable faceting (needed for facet_by). Default false."),
+  facet: z.boolean().optional().describe("Enable facet_by; default false."),
   sort: z
     .boolean()
     .optional()
-    .describe(
-      "Enable sort_by on this field. Numeric fields sort by default; strings default false.",
-    ),
+    .describe("Enable sort_by; numeric default true, string default false."),
   index: z
     .boolean()
     .optional()
-    .describe(
-      "Index the field for search/filter/facet/sort. Default true; false = stored only.",
-    ),
+    .describe("Index for search/filter/sort/facet; default true."),
   optional: z
     .boolean()
     .optional()
-    .describe("Allow documents without this field. Default false."),
+    .describe("Allow missing values; default false."),
   infix: z.boolean().optional().describe("Enable infix search."),
   stem: z.boolean().optional().describe("Enable stemming."),
   locale: z.string().optional().describe("Language locale, e.g. `ja`."),
@@ -61,7 +54,7 @@ const fieldLifecycleInputSchema = z
       .string()
       .optional()
       .describe(
-        "Typesense field type: string, int32, int64, float, bool, string[], ... collections.fields.replace defaults to the existing type.",
+        "Field type (string, int32, float, bool, string[], ...); replace defaults to existing type.",
       ),
     ...fieldFlagShape,
     yes: z.boolean().optional(),
@@ -373,6 +366,33 @@ async function addField(
   };
 }
 
+/** Discovery projection only; full schemas remain available through retrieve/list. */
+function projectCollection(value: unknown): unknown {
+  if (!isObject(value)) return value;
+  const keys = [
+    "name",
+    "num_documents",
+    "default_sorting_field",
+    "synonym_sets",
+    "curation_sets",
+  ];
+  const result = Object.fromEntries(
+    keys.filter((key) => key in value).map((key) => [key, value[key]]),
+  );
+  if (Array.isArray(value.fields)) {
+    result.fields = value.fields.map((field) =>
+      isObject(field)
+        ? Object.fromEntries(
+            ["name", "type", "facet", "sort", "index", "optional"]
+              .filter((key) => key in field)
+              .map((key) => [key, field[key]]),
+          )
+        : field,
+    );
+  }
+  return result;
+}
+
 export const collectionOperations = [
   {
     name: "collections.create",
@@ -394,16 +414,28 @@ export const collectionOperations = [
     name: "collections.list",
     summary: "List collections",
     description:
-      "List every collection with its full schema: fields (type and facet/sort/index/optional flags), num_documents, default_sorting_field, and linked synonym_sets/curation_sets. One call usually covers all schema discovery; use aliases.list to resolve alias names.",
+      "Discover collections. Prefer compact:true: returns {collections, aliases} with names, counts, field name/type/facet/sort/index/optional flags, default_sorting_field and linked synonym/curation sets. Default: full schema array. collections.retrieve gives omitted schema details.",
     category: "collections",
-    input: z.object({}),
-    execute: async (client) => api(client).get("/collections"),
+    input: z.object({ compact: z.boolean().optional() }),
+    execute: async (client, input) => {
+      if (!input.compact) return api(client).get("/collections");
+      const [collections, aliases] = await Promise.all([
+        api(client).get<unknown[]>("/collections"),
+        api(client).get<{ aliases: unknown[] }>("/aliases"),
+      ]);
+      return {
+        collections: collections.map((collection) =>
+          projectCollection(collection),
+        ),
+        aliases: aliases.aliases,
+      };
+    },
   },
   {
     name: "collections.retrieve",
     summary: "Retrieve a collection",
     description:
-      "Get one collection's full schema and num_documents (accepts an alias). collections.list already returns this for every collection.",
+      "Get full schema and num_documents for a collection/alias; includes details omitted by compact discovery.",
     category: "collections",
     input: z.object({ collection: z.string() }),
     execute: async (client, input) =>

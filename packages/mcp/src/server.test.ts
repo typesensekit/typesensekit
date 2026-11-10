@@ -71,9 +71,7 @@ describe("MCP server", () => {
       ]);
       const result = await client.callTool({ name: "health", arguments: {} });
       expect(result.structuredContent).toEqual({ result: { ok: true } });
-      expect(result.content).toEqual([
-        { type: "text", text: '{\n  "ok": true\n}' },
-      ]);
+      expect(result.content).toEqual([{ type: "text", text: '{"ok":true}' }]);
     } finally {
       await client.close();
       await server.close();
