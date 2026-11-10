@@ -121,5 +121,5 @@ export/import is unnecessary. Pass every flag you want to retain, because
 omitted flags reset to Typesense defaults. If you do want a backup, write it in
 your working directory (`tsk documents export products --format jsonl > backup.jsonl`).
 
-The CLI bundles its runtime dependencies and builds argument definitions only
-for the selected operation to reduce startup work on each shell invocation.
+The CLI builds argument definitions only for the selected operation to reduce
+startup work on each shell invocation.
