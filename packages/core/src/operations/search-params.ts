@@ -51,7 +51,7 @@ function commonSearchParamShape(value: ParamValue) {
       "Facet values returned per field. Default 10: raise it (e.g. 250) when you need every value.",
     ),
     per_page: param(
-      "Hits per page. Default 10, max 250. Use 0 to only get `found` and facets. Full hits are large (~0.5 KB each even with include_fields), so for more than ~20 hits also set compact: true and include_fields.",
+      "Hits per page. Default 10, max 250. Use 0 to only get `found` and facets. Full hits are large (~0.5 KB each even with include_fields), so for more than ~20 hits also set include_fields and the tool's top-level compact: true.",
     ),
     page: param("1-based page number for paginating beyond per_page."),
     include_fields: param(
@@ -164,6 +164,22 @@ export function compactSearchResult(result: unknown): unknown {
     }
   }
   return compacted;
+}
+
+/**
+ * Typesense has no `compact` search parameter, so a `compact` flag placed
+ * inside the search parameters is treated as the top-level option and removed
+ * before the request is sent.
+ */
+export function takeCompactFlag<T extends JsonObject>(
+  params: T | undefined,
+): { compact: boolean; params: T | undefined } {
+  if (!params || !("compact" in params)) return { compact: false, params };
+  const { compact, ...rest } = params;
+  return {
+    compact: compact === true || compact === "true",
+    params: rest as T,
+  };
 }
 
 /** Asks Typesense to skip highlight work for compact searches unless the caller set it. */

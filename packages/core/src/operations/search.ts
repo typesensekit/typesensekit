@@ -6,6 +6,7 @@ import {
   compactSearchResult,
   FILTER_BY_HELP,
   searchParamsSchema,
+  takeCompactFlag,
 } from "./search-params.js";
 import type { Operation } from "./types.js";
 
@@ -33,11 +34,10 @@ export async function runCollectionSearch(
   input: SearchInput,
 ) {
   const path = `${collectionPath(input.collection)}/documents/search`;
-  if (!input.compact) return api(client).get(path, input.params);
-  const result = await api(client).get(
-    path,
-    compactRequestParams(input.params),
-  );
+  const nested = takeCompactFlag(input.params);
+  const params = nested.params ?? {};
+  if (!input.compact && !nested.compact) return api(client).get(path, params);
+  const result = await api(client).get(path, compactRequestParams(params));
   return compactSearchResult(result);
 }
 
@@ -76,7 +76,12 @@ export const searchOperations = [
       compact: compactSchema,
     }),
     execute: async (client, input) => {
-      if (!input.compact) {
+      const common = takeCompactFlag(input.commonParams);
+      const searches = input.searches.map((search) => takeCompactFlag(search));
+      const allCompact = Boolean(input.compact) || common.compact;
+      const anyCompact =
+        allCompact || searches.some((search) => search.compact);
+      if (!anyCompact) {
         return api(client).post(
           "/multi_search",
           { searches: input.searches },
@@ -85,11 +90,24 @@ export const searchOperations = [
       }
       const result = await api(client).post<{ results?: unknown }>(
         "/multi_search",
-        { searches: input.searches },
-        compactRequestParams(input.commonParams ?? {}),
+        {
+          searches: searches.map((search) =>
+            allCompact || !search.compact
+              ? search.params
+              : compactRequestParams(search.params ?? {}),
+          ),
+        },
+        allCompact ? compactRequestParams(common.params ?? {}) : common.params,
       );
       return Array.isArray(result?.results)
-        ? { ...result, results: result.results.map(compactSearchResult) }
+        ? {
+            ...result,
+            results: result.results.map((entry, index) =>
+              allCompact || searches[index]?.compact
+                ? compactSearchResult(entry)
+                : entry,
+            ),
+          }
         : result;
     },
   },

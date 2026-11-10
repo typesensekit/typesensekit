@@ -136,6 +136,83 @@ describe("compact search results", () => {
   });
 });
 
+describe("compact flag placement", () => {
+  it("treats compact inside params as the top-level option", async () => {
+    const operation = getOperation("search");
+    const get = vi.fn().mockResolvedValue(rawResult);
+    const client = { apiCall: { get } } as unknown as TypesenseClient;
+
+    const result = await operation.execute(
+      client,
+      operation.input.parse({
+        collection: "products",
+        params: { q: "*", per_page: 50, compact: true },
+      }),
+    );
+
+    expect(get).toHaveBeenCalledWith("/collections/products/documents/search", {
+      highlight_fields: "none",
+      enable_highlight_v1: false,
+      q: "*",
+      per_page: 50,
+    });
+    expect(result).toEqual(compactSearchResult(rawResult));
+  });
+
+  it("strips compact: false from params without compacting", async () => {
+    const operation = getOperation("documents.search");
+    const get = vi.fn().mockResolvedValue(rawResult);
+    const client = { apiCall: { get } } as unknown as TypesenseClient;
+    await expect(
+      operation.execute(
+        client,
+        operation.input.parse({
+          collection: "products",
+          params: { q: "*", compact: false },
+        }),
+      ),
+    ).resolves.toBe(rawResult);
+    expect(get).toHaveBeenCalledWith("/collections/products/documents/search", {
+      q: "*",
+    });
+  });
+
+  it("compacts only the multi_search entries that ask for it", async () => {
+    const operation = getOperation("multi_search");
+    const post = vi.fn().mockResolvedValue({ results: [rawResult, rawResult] });
+    const client = { apiCall: { post } } as unknown as TypesenseClient;
+
+    await expect(
+      operation.execute(
+        client,
+        operation.input.parse({
+          searches: [
+            { collection: "products", q: "*", compact: true },
+            { collection: "books", q: "*" },
+          ],
+        }),
+      ),
+    ).resolves.toEqual({
+      results: [compactSearchResult(rawResult), rawResult],
+    });
+    expect(post).toHaveBeenCalledWith(
+      "/multi_search",
+      {
+        searches: [
+          {
+            highlight_fields: "none",
+            enable_highlight_v1: false,
+            collection: "products",
+            q: "*",
+          },
+          { collection: "books", q: "*" },
+        ],
+      },
+      undefined,
+    );
+  });
+});
+
 describe("search parameter schemas", () => {
   it("keeps documents.search value validation for documented keys", () => {
     const operation = getOperation("documents.search");
