@@ -1,0 +1,233 @@
+{
+  "$comment": "Cluster state seeded before every task attempt. Applied with plain Typesense HTTP calls (src/typesense.ts), never through an interface under test. Order matters: synonym and curation sets must exist before the collections that link them.",
+  "synonym_sets": {
+    "furniture-synonyms": {
+      "items": [
+        {
+          "id": "tv",
+          "synonyms": ["tv", "television"]
+        },
+        {
+          "id": "rug",
+          "synonyms": ["rug", "carpet"]
+        },
+        {
+          "id": "lamp",
+          "synonyms": ["lamp", "light"]
+        }
+      ]
+    },
+    "support-synonyms": {
+      "items": [
+        {
+          "id": "shipping",
+          "synonyms": ["shipping", "delivery"]
+        },
+        {
+          "id": "invoice",
+          "synonyms": ["invoice", "receipt"]
+        }
+      ]
+    }
+  },
+  "curation_sets": {
+    "product-curations": {
+      "items": [
+        {
+          "id": "hide-discontinued-headphones",
+          "rule": {
+            "query": "headphones",
+            "match": "contains"
+          },
+          "excludes": [
+            {
+              "id": "p016"
+            }
+          ]
+        },
+        {
+          "id": "promote-linden-sofa",
+          "rule": {
+            "query": "sofa",
+            "match": "exact"
+          },
+          "includes": [
+            {
+              "id": "p010",
+              "position": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "collections": [
+    {
+      "name": "products",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "brand",
+          "type": "string",
+          "facet": true
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "facet": true
+        },
+        {
+          "name": "price",
+          "type": "float",
+          "facet": true
+        },
+        {
+          "name": "rating",
+          "type": "float",
+          "facet": true
+        },
+        {
+          "name": "in_stock",
+          "type": "bool",
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "type": "string[]",
+          "facet": true
+        },
+        {
+          "name": "release_year",
+          "type": "int32",
+          "facet": true
+        },
+        {
+          "name": "num_reviews",
+          "type": "int32"
+        }
+      ],
+      "default_sorting_field": "num_reviews",
+      "synonym_sets": ["furniture-synonyms"],
+      "curation_sets": ["product-curations"],
+      "documents": "products.jsonl"
+    },
+    {
+      "name": "books",
+      "fields": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "author",
+          "type": "string",
+          "facet": true
+        },
+        {
+          "name": "genre",
+          "type": "string",
+          "facet": true
+        },
+        {
+          "name": "year",
+          "type": "int32",
+          "facet": true
+        },
+        {
+          "name": "pages",
+          "type": "int32",
+          "facet": true
+        },
+        {
+          "name": "rating",
+          "type": "float"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "facet": true
+        },
+        {
+          "name": "isbn",
+          "type": "string"
+        }
+      ],
+      "default_sorting_field": "rating",
+      "documents": "books.jsonl"
+    },
+    {
+      "$comment": "Deliberately misconfigured for debugging tasks: category not facetable, product_area not indexed, views not sortable.",
+      "name": "support_articles",
+      "fields": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "type": "string"
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "facet": false
+        },
+        {
+          "name": "product_area",
+          "type": "string",
+          "index": false,
+          "optional": true
+        },
+        {
+          "name": "views",
+          "type": "int32",
+          "sort": false
+        },
+        {
+          "name": "published",
+          "type": "bool",
+          "facet": true
+        }
+      ],
+      "synonym_sets": ["support-synonyms"],
+      "documents": "support_articles.jsonl"
+    }
+  ],
+  "presets": {
+    "book_search": {
+      "value": {
+        "query_by": "title,author",
+        "sort_by": "rating:desc"
+      }
+    },
+    "support_search": {
+      "value": {
+        "query_by": "title"
+      }
+    },
+    "product_browse": {
+      "value": {
+        "query_by": "name,description",
+        "facet_by": "brand,category"
+      }
+    }
+  },
+  "stopwords": {
+    "common-words": {
+      "stopwords": ["the", "a", "an", "of", "and"],
+      "locale": "en"
+    }
+  },
+  "aliases": {
+    "catalog": "products",
+    "library": "books",
+    "help_center": "support_articles"
+  }
+}

@@ -1,0 +1,24 @@
+{"id":"a01","title":"Getting your money back","body":"How to request a refund for an order within 30 days.","category":"Billing","product_area":"payments","views":7759,"published":true}
+{"id":"a02","title":"How long reimbursements take","body":"Most refund requests are processed in 5 to 7 business days.","category":"Billing","product_area":"payments","views":3761,"published":true}
+{"id":"a03","title":"Returning a damaged item","body":"Start a return and choose refund or replacement.","category":"Orders","product_area":"returns","views":1817,"published":true}
+{"id":"a04","title":"Partial money back on bundles","body":"Bundles qualify for a partial refund per item.","category":"Billing","product_area":"payments","views":3796,"published":true}
+{"id":"a05","title":"Cancelling before shipment","body":"Orders cancelled before shipment get an automatic refund.","category":"Orders","product_area":"orders","views":3365,"published":true}
+{"id":"a06","title":"How to sign in to your account","body":"Use your email address and password to sign in.","category":"Account","product_area":"identity","views":827,"published":true}
+{"id":"a07","title":"Trouble signing in","body":"If you cannot sign in, reset your password from the sign in page.","category":"Account","product_area":"identity","views":4979,"published":false}
+{"id":"a08","title":"Sign in with a passkey","body":"Passkeys let you sign in without a password.","category":"Account","product_area":"identity","views":3370,"published":true}
+{"id":"a09","title":"Two-step verification","body":"Add a second step when you sign in from a new device.","category":"Account","product_area":"security","views":5140,"published":true}
+{"id":"a10","title":"Changing your email address","body":"Update the email you use for notifications.","category":"Account","product_area":"identity","views":144,"published":true}
+{"id":"a11","title":"Tracking your shipment","body":"Find the tracking link in your shipping confirmation email.","category":"Shipping","product_area":"logistics","views":4979,"published":true}
+{"id":"a12","title":"Shipping to a PO box","body":"Some carriers cannot deliver to PO boxes.","category":"Shipping","product_area":"logistics","views":5901,"published":true}
+{"id":"a13","title":"International shipping rates","body":"Rates depend on destination and package weight.","category":"Shipping","product_area":"logistics","views":5721,"published":true}
+{"id":"a14","title":"Express shipping cut-off times","body":"Order before 2pm for same-day dispatch.","category":"Shipping","product_area":"logistics","views":5507,"published":false}
+{"id":"a15","title":"Downloading an invoice","body":"Invoices are available from the orders page.","category":"Billing","product_area":"payments","views":1765,"published":true}
+{"id":"a16","title":"Updating a payment method","body":"Add or remove cards from your wallet.","category":"Billing","product_area":"payments","views":510,"published":true}
+{"id":"a17","title":"Gift cards and store credit","body":"Store credit never expires and can be combined with cards.","category":"Billing","product_area":"payments","views":4571,"published":true}
+{"id":"a18","title":"Assembling a sofa frame","body":"Attach the legs before fixing the back cushions.","category":"Products","product_area":"furniture","views":7448,"published":true}
+{"id":"a19","title":"Pairing wireless headphones","body":"Hold the power button for five seconds to enter pairing mode.","category":"Products","product_area":"audio","views":6041,"published":true}
+{"id":"a20","title":"Cleaning a cast-iron dutch oven","body":"Avoid soap and dry immediately after rinsing.","category":"Products","product_area":"kitchen","views":2244,"published":true}
+{"id":"a21","title":"Warranty coverage","body":"Most products include a two year limited warranty.","category":"Orders","product_area":"returns","views":1785,"published":false}
+{"id":"a22","title":"Deleting your account","body":"Account deletion is permanent after 14 days.","category":"Account","product_area":"privacy","views":741,"published":true}
+{"id":"a23","title":"Exporting your data","body":"Request a copy of your personal data from settings.","category":"Account","product_area":"privacy","views":7674,"published":true}
+{"id":"a24","title":"Contacting support","body":"Chat support is available every day from 8am to 8pm.","category":"General","product_area":"support","views":417,"published":true}
