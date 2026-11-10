@@ -125,7 +125,7 @@ export const documentOperations = [
     name: "documents.import",
     summary: "Import documents into a collection",
     description:
-      "Bulk create/upsert/update/emplace documents (array of objects or JSONL). Returns one JSONL status line per document. Prefer this over many single-document calls.",
+      "Bulk create/upsert/update/emplace documents (array of objects or JSONL). Returns one JSONL status line per document. Prefer this over many single-document calls; to copy documents between collections, use documents.copy.",
     category: "documents",
     input: z.object({
       collection,
@@ -173,6 +173,64 @@ export const documentOperations = [
       compact: compactSchema,
     }),
     execute: async (client, input) => runCollectionSearch(client, input),
+  },
+  {
+    name: "documents.copy",
+    summary: "Copy documents from one collection to another",
+    description:
+      "Copy every document (or those matching filterBy) from `collection` into `target` inside the server, without sending documents through the conversation. Typical reindex: collections.create the new schema, documents.copy, then aliases.create to repoint the alias. Returns {exported, imported, failed, errors}.",
+    category: "documents",
+    input: z.object({
+      collection: z.string().describe("Source collection name or alias."),
+      target: z.string().describe("Target collection (must already exist)."),
+      filterBy: z
+        .string()
+        .min(1)
+        .optional()
+        .describe("Only copy documents matching this filter_by expression."),
+      action: z
+        .enum(["create", "upsert", "update", "emplace"])
+        .optional()
+        .describe("Import action in the target (default create)."),
+    }),
+    execute: async (client, input) => {
+      const request = api(client);
+      const exported = await request.get<string>(
+        `${collectionPath(input.collection)}/documents/export`,
+        input.filterBy ? { filter_by: input.filterBy } : undefined,
+        { responseType: "text" },
+      );
+      const lines = String(exported ?? "")
+        .split("\n")
+        .filter((line) => line.trim() !== "");
+      if (lines.length === 0) {
+        return { exported: 0, imported: 0, failed: 0, errors: [] };
+      }
+      const response = await request.post<string>(
+        `${collectionPath(input.target)}/documents/import`,
+        lines.join("\n"),
+        { action: input.action ?? "create" },
+        { "Content-Type": "text/plain" },
+        { responseType: "text" },
+      );
+      const results = String(response ?? "")
+        .split("\n")
+        .filter((line) => line.trim() !== "")
+        .map((line) => {
+          try {
+            return JSON.parse(line) as Record<string, unknown>;
+          } catch {
+            return { success: false, error: line };
+          }
+        });
+      const failures = results.filter((result) => result.success !== true);
+      return {
+        exported: lines.length,
+        imported: results.length - failures.length,
+        failed: failures.length,
+        errors: failures.slice(0, 5),
+      };
+    },
   },
   {
     name: "documents.delete_by_filter",

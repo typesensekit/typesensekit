@@ -51,7 +51,7 @@ function commonSearchParamShape(value: ParamValue) {
       "Facet values returned per field. Default 10: raise it (e.g. 250) when you need every value.",
     ),
     per_page: param(
-      "Hits per page. Default 10, max 250. Use 0 to only get `found` and facets.",
+      "Hits per page. Default 10, max 250. Use 0 to only get `found` and facets. Full hits are large (~0.5 KB each even with include_fields), so for more than ~20 hits also set compact: true and include_fields.",
     ),
     page: param("1-based page number for paginating beyond per_page."),
     include_fields: param(

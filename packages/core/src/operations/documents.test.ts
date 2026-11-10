@@ -156,3 +156,40 @@ it("deletes and updates documents by filter in one request", async () => {
       .success,
   ).toBe(false);
 });
+
+it("copies documents between collections on the server", async () => {
+  const operation = getOperation("documents.copy");
+  const get = vi.fn().mockResolvedValue('{"id":"1"}\n{"id":"2"}\n');
+  const post = vi
+    .fn()
+    .mockResolvedValue('{"success":true}\n{"success":false,"error":"bad"}');
+  const client = { apiCall: { get, post } } as unknown as TypesenseClient;
+
+  await expect(
+    operation.execute(
+      client,
+      operation.input.parse({
+        collection: "books",
+        target: "books_v2",
+        filterBy: "year:>2000",
+      }),
+    ),
+  ).resolves.toEqual({
+    exported: 2,
+    imported: 1,
+    failed: 1,
+    errors: [{ success: false, error: "bad" }],
+  });
+  expect(get).toHaveBeenCalledWith(
+    "/collections/books/documents/export",
+    { filter_by: "year:>2000" },
+    { responseType: "text" },
+  );
+  expect(post).toHaveBeenCalledWith(
+    "/collections/books_v2/documents/import",
+    '{"id":"1"}\n{"id":"2"}',
+    { action: "create" },
+    { "Content-Type": "text/plain" },
+    { responseType: "text" },
+  );
+});

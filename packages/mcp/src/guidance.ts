@@ -16,7 +16,7 @@ const SHARED_INSTRUCTIONS = [
   "- filter_by: field:=value (exact), field:[a,b] (any of), price:<100, year:[1990..1999] (range), && / ||. Backtick-quote values containing spaces or special characters such as & , ( ): brand:=`Smith & Co`.",
   "- Facets: only the top 10 values per field come back unless you set max_facet_values (search) or maxFacetValues (search.facets). Numeric facet fields also return stats (min, max, sum, avg), which answers totals and averages without reading documents.",
   "- Results include synonym expansion and curation rules (pinned or hidden hits). To see raw matches, set enable_synonyms: false or enable_overrides: false.",
-  "- Use compact: true and include_fields to keep responses small. Use multi_search to run several independent searches in one call.",
+  "- Full hits carry highlight and scoring metadata (~0.5 KB per hit). When reading more than a few hits, set compact: true and include_fields so large pages fit in your context. Use multi_search to run several independent searches in one call.",
   "",
   "Synonyms and curation",
   "- On Typesense v30+, synonyms and curation rules live in global synonym_sets and curation_sets, linked from each collection's schema. The synonyms.* and overrides.* tools are legacy (Typesense v29 and earlier).",
@@ -26,7 +26,7 @@ const WRITE_INSTRUCTIONS = [
   "",
   "Changing data and schemas",
   "- Typesense cannot modify an existing field in place. To change a field's facet, sort, index, optional or type setting, use collections.fields.replace with the full desired definition. Stored values are re-indexed, so no export or re-import is needed. Use collections.update only to add new fields or drop fields.",
-  "- Bulk changes: documents.delete_by_filter and documents.update_by_filter change every match in one call; documents.import loads many documents at once.",
+  "- Bulk changes: documents.delete_by_filter and documents.update_by_filter change every match in one call; documents.import loads many documents at once; documents.copy copies documents between collections on the server (e.g. reindexing into a new schema before repointing an alias), so you never have to re-send them.",
   "- presets.create and synonym_sets.create replace the whole value. To add one rule, use synonym_sets.items.create or curation_sets.items.upsert.",
 ];
 
