@@ -12,6 +12,6 @@ export const QUICK_START = [
   "# Count: --per-page 0, read found. Counts per value: --facet-by brand --max-facet-values 250 --per-page 0 (numeric facets also give min/max/avg/sum over all matches).",
   "$ tsk documents get products <id>",
   "$ tsk documents export products --filter-by 'in_stock:=true' --include-fields id,price --format jsonl",
-  '# Any operation also takes --input \'<JSON>\' (e.g. --input \'{"collection":"products","params":{"q":"*"}}\'). Destructive writes need --yes.',
+  '# Any operation also takes --input \'<JSON>\' (e.g. --input \'{"collection":"products","params":{"q":"*"}}\'). --compact gives dense output on any operation. Destructive writes need --yes.',
   "# More: tsk <group> --help | tsk <operation> --help (inputs, flags, examples) | --schema",
 ].join("\n");

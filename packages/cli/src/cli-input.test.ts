@@ -24,6 +24,9 @@ it("parses flag values without stealing positionals after boolean flags", () => 
       { key: "json", value: true },
     ],
   });
+  expect(
+    parseArgv(["--facet", "false", "x"], (key) => key === "facet"),
+  ).toEqual({ positionals: ["x"], flags: [{ key: "facet", value: "false" }] });
   expect(parseArgv(["--offset", "-5"], () => false).flags).toEqual([
     { key: "offset", value: "-5" },
   ]);

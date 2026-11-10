@@ -55,7 +55,11 @@ export function parseArgv(
       continue;
     }
     const next = rawArgs[index + 1];
-    if (
+    if (isBoolean(body) && /^(?:true|false)$/i.test(next ?? "")) {
+      // `--facet true` / `--facet false` spell out a boolean value.
+      flags.push({ key: body, value: String(next).toLowerCase() });
+      index++;
+    } else if (
       !isBoolean(body) &&
       next !== undefined &&
       (!next.startsWith("-") || /^-\d/.test(next))

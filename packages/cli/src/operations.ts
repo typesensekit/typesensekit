@@ -122,6 +122,14 @@ const COMPACT_COLLECTION_OPERATIONS = new Set([
   "collections.retrieve",
 ]);
 
+function hasInputCompact(operationName: string): boolean {
+  const operation = operations.find((entry) => entry.name === operationName);
+  return Boolean(
+    operation &&
+      inputObjectSchema(operation.input).properties?.compact !== undefined,
+  );
+}
+
 /** Flags every operation command accepts (citty definitions). */
 function baseArgs(operationName: string): ArgsDef {
   return {
@@ -142,7 +150,15 @@ function baseArgs(operationName: string): ArgsDef {
               "Short overview: doc counts, aliases, and fields with type and facet/sort flags (JSON with --json)",
           },
         }
-      : {}),
+      : hasInputCompact(operationName)
+        ? {}
+        : {
+            compact: {
+              type: "boolean" as const,
+              description:
+                "Dense output without --json: valid JSON with one list entry per line",
+            },
+          }),
     input: {
       type: "string",
       description: "JSON object matching this operation input schema",
@@ -424,10 +440,11 @@ export function operationCommands() {
               return;
             }
             if (
-              SEARCH_OPERATIONS.has(operation.name) &&
               !args.json &&
-              (input.compact === true ||
-                (input.params as Record<string, unknown>)?.compact === true)
+              (args.compact === true ||
+                input.compact === true ||
+                (SEARCH_OPERATIONS.has(operation.name) &&
+                  (input.params as Record<string, unknown>)?.compact === true))
             ) {
               console.log(renderDense(result));
               return;
