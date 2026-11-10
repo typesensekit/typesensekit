@@ -1,0 +1,43 @@
+{
+  "name": "typesensekit-cli",
+  "kind": "cli",
+  "description": "TypesenseKit CLI (`tsk`, packages/cli) in a Bash tool restricted to tsk plus basic text tools. No MCP.",
+  "requires": ["${REPO_ROOT}/packages/cli/dist/cli.js"],
+  "commands": {
+    "tsk": {
+      "command": "${NODE}",
+      "args": ["${REPO_ROOT}/packages/cli/dist/cli.js"]
+    }
+  },
+  "allowedCommands": [
+    "tsk",
+    "jq",
+    "head",
+    "tail",
+    "grep",
+    "wc",
+    "sort",
+    "uniq",
+    "cut",
+    "tr",
+    "echo",
+    "printf"
+  ],
+  "env": {
+    "TYPESENSE_URL": "${TYPESENSE_URL}",
+    "TYPESENSE_API_KEY": "${TYPESENSE_API_KEY}",
+    "NO_COLOR": "1"
+  },
+  "modes": {
+    "read-only": { "env": {} },
+    "full-access": { "env": {} }
+  },
+  "promptHint": "You have a Bash shell. The `tsk` command is a Typesense CLI that is already configured to talk to the cluster. Discover its usage with `tsk operations`, `tsk <operation> --help`, `tsk <operation> --schema`, and `tsk <operation> --examples`. Besides `tsk`, only basic text tools (jq, head, tail, grep, wc, sort, uniq, cut, tr, echo, printf) are available.",
+  "opPattern": "^tsk\\s+([A-Za-z0-9_.-]+)",
+  "discoveryPattern": "(--help|--schema|--examples|^tsk\\s+operations\\b|^tsk\\s*$|^tsk\\s+-h\\b)",
+  "toolGroups": [
+    ["search", "documents.search"],
+    ["synonyms.list", "synonym_sets.list"],
+    ["overrides.list", "curation_sets.list"]
+  ]
+}

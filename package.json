@@ -20,6 +20,7 @@
     "release": "changeset publish",
     "release:ci": "node scripts/skip-published-packages.mjs && changeset publish",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm docs:check && pnpm --filter @typesensekit/mcp smoke:stdio",
+    "eval": "pnpm --filter @typesensekit/evals run eval",
     "pack:dry": "npm pack --dry-run --json ./packages/cli && npm pack --dry-run --json ./packages/mcp",
     "prepublishOnly": "pnpm check"
   },

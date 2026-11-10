@@ -1,0 +1,21 @@
+{
+  "name": "community-stdio-mcp",
+  "kind": "mcp",
+  "description": "Template for a third-party Typesense MCP server launched over stdio (e.g. via npx). It connects to the disposable Docker cluster through the templated env. Remove the full-access mode if the server is read-only, and its write tasks are skipped.",
+  "server": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "some-typesense-mcp-server"],
+    "env": {
+      "TYPESENSE_HOST": "${TYPESENSE_HOST}",
+      "TYPESENSE_PORT": "${TYPESENSE_PORT}",
+      "TYPESENSE_PROTOCOL": "${TYPESENSE_PROTOCOL}",
+      "TYPESENSE_API_KEY": "${TYPESENSE_API_KEY}"
+    }
+  },
+  "modes": {
+    "read-only": {},
+    "full-access": {}
+  },
+  "alwaysLoadTools": true
+}

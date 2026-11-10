@@ -1,0 +1,23 @@
+{
+  "name": "@typesensekit/evals",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "On-demand agent task-success benchmark for TypesenseKit interfaces. Costs API credits; not part of pnpm check or CI.",
+  "scripts": {
+    "eval": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.322",
+    "@anthropic-ai/sdk": "^1.7.0",
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}
