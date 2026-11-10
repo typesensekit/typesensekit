@@ -23,6 +23,8 @@ function withoutUndefined(params: Record<string, unknown>) {
   );
 }
 
+type CompactFlag = ReturnType<typeof takeCompactFlag<Record<string, unknown>>>;
+
 export type SearchInput = {
   collection: string;
   params: Record<string, unknown>;
@@ -77,7 +79,9 @@ export const searchOperations = [
     }),
     execute: async (client, input) => {
       const common = takeCompactFlag(input.commonParams);
-      const searches = input.searches.map((search) => takeCompactFlag(search));
+      const searches: CompactFlag[] = input.searches.map(
+        (search: Record<string, unknown>) => takeCompactFlag(search),
+      );
       const allCompact = Boolean(input.compact) || common.compact;
       const anyCompact =
         allCompact || searches.some((search) => search.compact);
