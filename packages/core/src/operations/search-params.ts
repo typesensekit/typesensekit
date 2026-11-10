@@ -28,42 +28,40 @@ export const documentedScalarParamValue = () =>
 type ParamValue = () => z.ZodTypeAny;
 
 export const FILTER_BY_HELP =
-  "Filter expression, e.g. `price:<100 && in_stock:=true`, `brand:=[A,B]`, `year:[1990..1999]`, `tags:!=old`. `:=` is exact match, `:` is token match. Wrap values containing spaces, commas, `&`, `(`, `)` or other special characters in backticks: brand:=`Smith & Co`. Only indexed fields can be filtered.";
+  "Indexed fields only. Exact `:=`, token `:`, list `field:[a,b]`, range `year:[1990..1999]`, comparisons, &&/||. Backtick-quote spaces/special characters: brand:=`Smith & Co`.";
 
-function commonSearchParamShape(value: ParamValue) {
-  const param = (description: string) =>
-    value().optional().describe(description);
+function commonSearchParamShape(value: ParamValue, descriptions: boolean) {
+  const param = (description: string) => {
+    const schema = value().optional();
+    return descriptions ? schema.describe(description) : schema;
+  };
   return {
-    q: param(
-      "Query text. Use `*` to match every document (then query_by is optional).",
-    ),
+    q: param("Query text; `*` matches all, without query_by."),
     query_by: param(
-      "Comma-separated string fields to search, e.g. `title,description`. Required unless q is `*`.",
+      "String fields, comma-separated. Required unless q is `*`.",
     ),
     filter_by: param(FILTER_BY_HELP),
     sort_by: param(
-      "e.g. `price:asc` or `rating:desc,price:asc` (max 3). Field must be numeric or have sort: true. Default: text match, then default_sorting_field.",
+      "e.g. `rating:desc,price:asc` (max 3). Numeric or sort:true fields.",
     ),
     facet_by: param(
-      "Comma-separated facet fields (facet: true). Numeric facets also return stats: min/max/sum/avg over every matching document (total_values = distinct values only).",
+      "Comma-separated facet:true fields. Numeric stats min/max/sum/avg cover all matches; total_values counts distinct values.",
     ),
     max_facet_values: param(
-      "Facet values returned per field. Default 10: raise it (e.g. 250) when you need every value.",
+      "Values per facet; default 10. Raise for all values.",
     ),
     per_page: param(
-      "Hits per page. Default 10, max 250. Use 0 to only get `found` and facets. Full hits are large (~0.5 KB each even with include_fields), so for more than ~20 hits also set include_fields and the tool's top-level compact: true.",
+      "Default 10, max 250; 0 for counts/facets. Prefer compact:true and include_fields.",
     ),
-    page: param("1-based page number for paginating beyond per_page."),
-    include_fields: param(
-      "Comma-separated document fields to return (smaller responses).",
-    ),
+    page: param("1-based page; paginate beyond 250 hits."),
+    include_fields: param("Document fields to return, comma-separated."),
     exclude_fields: param("Comma-separated document fields to omit."),
     group_by: param(
       "Group hits by facet field(s); see group_limit (default 3 hits per group).",
     ),
     enable_synonyms: param("false disables synonym expansion (default true)."),
     enable_overrides: param(
-      "false disables curation/override rules such as pinned or hidden hits (default true).",
+      "false disables pinned/hidden hits (default true).",
     ),
     preset: param("Name of a stored preset whose params are applied."),
   };
@@ -76,15 +74,16 @@ function commonSearchParamShape(value: ParamValue) {
 export function searchParamsSchema(
   value: ParamValue = documentedScalarParamValue,
   catchall: ParamValue = scalarParamValue,
+  descriptions = true,
 ) {
   return z
-    .object(commonSearchParamShape(value))
+    .object(commonSearchParamShape(value, descriptions))
     .catchall(catchall())
     .describe(SEARCH_PARAMS_HELP);
 }
 
 const SEARCH_PARAMS_HELP =
-  "Typesense search parameters (snake_case, sent as-is). Any other Typesense search parameter (prefix, num_typos, group_limit, facet_query, highlight_fields, ...) is also accepted.";
+  "Typesense snake_case parameters; additional keys accepted (prefix, num_typos, group_limit, facet_query, ...).";
 
 export const exportParamsSchema = z
   .object({
@@ -103,7 +102,7 @@ export const compactSchema = z
   .boolean()
   .optional()
   .describe(
-    "true returns a smaller result: hits become {document} only (no highlight, highlights, text_match, text_match_info), facet counts drop the duplicate `highlighted` value, and request_params/search_cutoff/search_time_ms are omitted. Recommended unless you need match snippets or scores. Default false.",
+    "Prefer true: omit highlights, scores, request/timing metadata and facet highlighted values; preserve documents/counts/facets. Default false.",
   );
 
 type JsonObject = Record<string, unknown>;

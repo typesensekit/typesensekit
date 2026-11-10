@@ -44,7 +44,7 @@ export async function runCollectionSearch(
 }
 
 export const SEARCH_DESCRIPTION =
-  "Search one collection (or alias) with Typesense search parameters. Returns `found` (total matches), `hits` (one page, default 10, max 250 via per_page) and `facet_counts`. To count, use per_page: 0 and read `found`; to aggregate, use facet_by (numeric facets include min/max/sum/avg stats) or group_by instead of paging through documents. Results include synonym expansion and curation rules (pinned/hidden hits); disable with enable_synonyms/enable_overrides: false. Set compact: true (strongly recommended when per_page is above ~20) for a 5-10x smaller response.";
+  "Search a collection/alias. Prefer compact:true and include_fields. Returns found (total), hits (one page), facet_counts. Counts: per_page:0; aggregates: facet_by or group_by. Synonyms and pinned/hidden hits apply unless enable_synonyms/enable_overrides:false.";
 
 export const searchOperations = [
   {

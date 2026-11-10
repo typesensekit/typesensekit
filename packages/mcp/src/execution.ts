@@ -109,7 +109,7 @@ export class McpExecutionController {
   }
 
   serialize(value: unknown): string {
-    const text = JSON.stringify(value, null, 2);
+    const text = JSON.stringify(value);
     const bytes = Buffer.byteLength(text);
     if (bytes > this.config.maxResponseBytes) {
       throw new McpExecutionLimitError(

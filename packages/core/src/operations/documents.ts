@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { api, collectionPath, enc } from "./http.js";
-import { runCollectionSearch, SEARCH_DESCRIPTION } from "./search.js";
+import { runCollectionSearch } from "./search.js";
 import {
   compactSchema,
   exportParamsSchema,
@@ -13,7 +13,9 @@ const documentSchema = z.record(z.unknown());
 const MAX_BATCH_SIZE = 100;
 const BATCH_CONCURRENCY = 8;
 const idsSchema = z.array(z.string().min(1)).min(1).max(MAX_BATCH_SIZE);
-const searchParams = searchParamsSchema();
+// The canonical search tool documents these same properties. Keep validation
+// and named keys here without paying for duplicated help on every MCP turn.
+const searchParams = searchParamsSchema(undefined, undefined, false);
 const collection = z.string().describe("Collection name or alias.");
 const filterBy = z.string().min(1).describe(FILTER_BY_HELP);
 
@@ -165,7 +167,8 @@ export const documentOperations = [
   {
     name: "documents.search",
     summary: "Search within a collection",
-    description: `Same as the \`search\` tool (alias). ${SEARCH_DESCRIPTION}`,
+    description:
+      "Alias of search; prefer search. Same params, compact flag and results.",
     category: "documents",
     input: z.object({
       collection,
