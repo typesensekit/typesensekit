@@ -1,5 +1,29 @@
 # @typesensekit/mcp
 
+## 1.6.0
+
+### Minor Changes
+
+- 0c94c19: Help AI agents finish Typesense tasks in fewer calls:
+
+  - MCP tools now carry agent-oriented descriptions, and the server sends instructions covering discovery, search parameters, filter syntax, facets, synonym and curation sets, and schema changes.
+  - `search`, `documents.search` and `documents.export` document common Typesense parameters (`q`, `query_by`, `filter_by`, `sort_by`, `facet_by`, `per_page`, ...) while still accepting any other parameter.
+  - New optional `compact: true` on `search`, `documents.search` and `multi_search` returns hits as `{document}` only, without highlight and text-match metadata (`compact` inside `params` or a multi-search entry is honored too).
+  - New `documents.delete_by_filter`, `documents.update_by_filter` and `documents.copy` (server-side copy between collections, for reindexing) operations, full access only.
+  - `collections.fields.*` expose `facet`, `sort`, `index`, `optional`, `infix`, `stem` and `locale` in their schemas; `collections.fields.replace` defaults `type` to the field's current type.
+  - MCP errors add hints for common Typesense failures (in-place field changes, non-facetable, non-sortable or unindexed fields, missing `query_by`, unknown collections), and legacy `overrides.list` now points to the linked curation sets on Typesense v30.
+
+### Patch Changes
+
+- 0c94c19: Reduce MCP context overhead:
+
+  - Tool listings are about 40% smaller than in 1.5 (read-only 23.6k → 14.9k chars). They drop `$schema`, `additionalProperties: false` and descriptions that repeat the server instructions; `collections.fields.drop` only advertises its real inputs; rarely used vector and wait options are named instead of typed. Calls are still validated against the full input schemas.
+  - Tool guidance is more concise, and JSON responses are unindented (lossless).
+  - New opt-in `collections.list {compact: true}`: one call returns every collection's fields as `name: type [non-default flags]`, its aliases, linked synonym and curation sets, and `text_fields` (candidates for `query_by`). Full schemas and search defaults are unchanged.
+  - Errors about field flags (facet, sort, filter, non-indexed, missing `query_by`) list the collection's fields, and `collections.fields.replace` returns `num_documents`.
+
+- 0c94c19: Update dependencies to clear all `pnpm audit` advisories: Zod 4.6 (replacing Zod 3 and `zod-to-json-schema`, using Zod's built-in JSON Schema output), `@modelcontextprotocol/sdk` 1.32, and `typesense` 3.2, plus patched transitive versions of `follow-redirects`, `fast-uri`, `hono`, `@hono/node-server`, `body-parser`, `qs`, `ip-address`, `undici`, `sharp` and `source-map-js`. Validation error messages now use Zod 4's wording, and `--schema` output marks passthrough inputs with `additionalProperties: {}` (equivalent to `true`).
+
 ## 1.5.0
 
 ### Minor Changes
