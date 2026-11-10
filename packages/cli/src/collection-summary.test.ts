@@ -67,3 +67,36 @@ it("lists fields and query_by candidates for field errors", () => {
     ].join("\n"),
   );
 });
+
+it("redacts credentials in compact output, JSON and text", () => {
+  const schema = {
+    name: "docs",
+    num_documents: 1,
+    fields: [
+      {
+        name: "embedding",
+        type: "float[]",
+        embed: {
+          from: ["title"],
+          model_config: { model_name: "openai/x", api_key: "sk-secret-123" },
+        },
+      },
+    ],
+  };
+  const aliases = new Map<string, string[]>();
+  expect(renderCollectionsCompact([schema], aliases, true)).not.toContain(
+    "sk-secret-123",
+  );
+  expect(renderCollectionsCompact([schema], aliases, false)).not.toContain(
+    "sk-secret-123",
+  );
+});
+
+it("prints core's already-compact collections envelope unchanged", () => {
+  const envelope = {
+    collections: [{ name: "docs", fields: ["title: string"] }],
+  };
+  expect(
+    JSON.parse(renderCollectionsCompact(envelope, new Map(), true)),
+  ).toEqual(envelope);
+});

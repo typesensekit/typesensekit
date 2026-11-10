@@ -234,6 +234,9 @@ export function buildOperationInput(
   const cliFlag = new Map(
     Object.entries(cliArgs).map(([key, value]) => [normalizeKey(key), value]),
   );
+  const cliFlagName = new Map(
+    Object.keys(cliArgs).map((key) => [normalizeKey(key), key]),
+  );
   const property = new Map(
     Object.keys(properties).map((key) => [normalizeKey(key), key]),
   );
@@ -266,13 +269,40 @@ export function buildOperationInput(
 
   const fromFlags: Record<string, unknown> = {};
   const params: Record<string, unknown> = {};
+  let paramsFlag: Record<string, unknown> = {};
   const documentFields: Record<string, unknown> = {};
   for (const { key, value } of parsed.flags) {
     const normalized = normalizeKey(key);
-    // citty already parsed the CLI's own flags.
-    if (cliFlag.has(normalized)) continue;
+    if (cliFlag.has(normalized)) {
+      // citty parsed the CLI's own flags, but reads `--yes false` as
+      // `--yes` plus a stray "false". Apply explicit boolean values here so
+      // `--yes false` never confirms a destructive operation.
+      const flagName = cliFlagName.get(normalized);
+      if (
+        flagName &&
+        cliFlag.get(normalized)?.type === "boolean" &&
+        typeof value === "string" &&
+        /^(?:true|false)$/i.test(value)
+      ) {
+        args[flagName] = value.toLowerCase() === "true";
+      }
+      continue;
+    }
     const name = property.get(normalized);
-    if (name !== undefined && name !== "params") {
+    if (name === "params") {
+      // `--params '{"q":"x"}'` is the whole params object; individual
+      // `--<param>` flags are merged over it.
+      const parsedParams =
+        typeof value === "string" ? parseJsonValue(value) : undefined;
+      if (
+        !parsedParams ||
+        typeof parsedParams !== "object" ||
+        Array.isArray(parsedParams)
+      ) {
+        throw new Error("--params must be a JSON object");
+      }
+      paramsFlag = parsedParams as Record<string, unknown>;
+    } else if (name !== undefined) {
       fromFlags[name] = coerceFlagValue(value, properties[name]);
     } else if (PARAMS_OPERATIONS.has(operationName)) {
       params[snakeCase(key)] = value === true ? true : value;
@@ -301,10 +331,12 @@ export function buildOperationInput(
     ...json,
     ...fromFlags,
   };
-  if (Object.keys(params).length) {
+  if (Object.keys(params).length || Object.keys(paramsFlag).length) {
+    // Precedence: --input params < --params < individual --<param> flags.
     const existing = input.params;
     input.params = {
       ...(typeof existing === "object" && existing !== null ? existing : {}),
+      ...paramsFlag,
       ...params,
     };
   }

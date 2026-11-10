@@ -1,3 +1,5 @@
+import { redactSecrets } from "@typesensekit/core";
+
 type Field = Record<string, unknown> & { name?: unknown; type?: unknown };
 type Collection = Record<string, unknown> & {
   name?: unknown;
@@ -125,10 +127,22 @@ export function aliasesByCollection(aliases: unknown): Map<string, string[]> {
 }
 
 export function renderCollectionsCompact(
-  result: unknown,
+  rawResult: unknown,
   aliases: Map<string, string[]>,
   json: boolean,
 ): string {
+  // Schemas can carry credentials (e.g. embed.model_config.api_key).
+  const result = redactSecrets(rawResult);
+  // `collections.list {compact:true}` already returns core's compact
+  // envelope ({collections: [...]}); print it as-is instead of reading it
+  // as a single collection schema.
+  if (
+    isRecord(result) &&
+    Array.isArray(result.collections) &&
+    !("fields" in result)
+  ) {
+    return JSON.stringify(result, null, json ? undefined : 2);
+  }
   const collections = (Array.isArray(result) ? result : [result]).filter(
     isRecord,
   );

@@ -151,3 +151,50 @@ it("turns extra flags on document writes into document fields", () => {
     document: { price: 79.99, tags: ["a"], sku: "007" },
   });
 });
+
+it("never lets `--yes false` confirm a destructive operation", () => {
+  // citty pre-parses `--yes false` as yes=true; the input builder corrects it.
+  const args: Record<string, unknown> = { yes: true };
+  buildOperationInput(
+    "documents.delete_by_filter",
+    ["inventory", "--filter-by", "id:*", "--yes", "false"],
+    args,
+  );
+  expect(args.yes).toBe(false);
+  const confirmed: Record<string, unknown> = { yes: true };
+  buildOperationInput(
+    "documents.delete_by_filter",
+    ["inventory", "--filter-by", "id:*", "--yes"],
+    confirmed,
+  );
+  expect(confirmed.yes).toBe(true);
+});
+
+it("uses --params as the params object, with --<param> flags on top", () => {
+  expect(
+    buildOperationInput(
+      "search",
+      ["inventory", "--params", '{"q":"chair","query_by":"title"}'],
+      {},
+    ),
+  ).toMatchObject({
+    collection: "inventory",
+    params: { q: "chair", query_by: "title" },
+  });
+  expect(
+    buildOperationInput(
+      "search",
+      [
+        "inventory",
+        "--params",
+        '{"q":"chair","per_page":5}',
+        "--per-page",
+        "50",
+      ],
+      {},
+    ),
+  ).toMatchObject({ params: { q: "chair", per_page: "50" } });
+  expect(() =>
+    buildOperationInput("search", ["inventory", "--params", "[1]"], {}),
+  ).toThrow("--params must be a JSON object");
+});
