@@ -11,6 +11,7 @@ import {
   normalizeKey,
   PARAMS_OPERATIONS,
   parseArgv,
+  SEARCH_OPERATIONS,
   snakeCase,
   unknownKeyHint,
 } from "./cli-input.js";
@@ -25,7 +26,7 @@ import {
   renderInputSchema,
   renderOperationExamples,
 } from "./operation-docs.js";
-import { parseInput, render } from "./output.js";
+import { parseInput, render, renderDense } from "./output.js";
 import { resolveClient } from "./profile/resolve.js";
 import { QUICK_START } from "./quick-start.js";
 
@@ -422,6 +423,15 @@ export function operationCommands() {
               );
               return;
             }
+            if (
+              SEARCH_OPERATIONS.has(operation.name) &&
+              !args.json &&
+              (input.compact === true ||
+                (input.params as Record<string, unknown>)?.compact === true)
+            ) {
+              console.log(renderDense(result));
+              return;
+            }
             console.log(
               render(
                 result,
@@ -444,9 +454,10 @@ export function operationCommands() {
   );
 }
 
-export function listOperations(): string {
+export function listOperations(overview?: string): string {
   return [
     QUICK_START,
+    ...(overview ? [overview] : []),
     "# Operations (tsk <operation> --help for inputs, flags and examples):",
     ...operations.map((operation) => `${operation.name}\t${operation.summary}`),
   ].join("\n");

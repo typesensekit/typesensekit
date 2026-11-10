@@ -90,3 +90,44 @@ export function parseInput(raw: string | undefined): Record<string, unknown> {
   }
   return parsed as Record<string, unknown>;
 }
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isObjectList(value: unknown): value is unknown[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.some((entry) => typeof entry === "object" && entry !== null)
+  );
+}
+
+/**
+ * Valid JSON laid out for reading in a terminal or by an agent: scalars stay
+ * on one line, lists of objects get one entry per line, and those lists come
+ * after the scalar keys (e.g. `found` before `hits`).
+ */
+export function renderDense(value: unknown, indent = ""): string {
+  const safeValue = redactSecrets(value);
+  return dense(safeValue, indent);
+}
+
+function dense(value: unknown, indent: string): string {
+  const inner = `${indent}  `;
+  if (isObjectList(value)) {
+    return `[\n${value.map((entry) => `${inner}${dense(entry, inner)}`).join(",\n")}\n${indent}]`;
+  }
+  if (isPlainObject(value) && Object.values(value).some(isObjectList)) {
+    const entries = Object.entries(value).sort(
+      ([, a], [, b]) => Number(isObjectList(a)) - Number(isObjectList(b)),
+    );
+    return `{\n${entries
+      .map(
+        ([key, entry]) =>
+          `${inner}${JSON.stringify(key)}: ${dense(entry, inner)}`,
+      )
+      .join(",\n")}\n${indent}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}

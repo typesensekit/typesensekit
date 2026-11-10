@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import packageJson from "../package.json" with { type: "json" };
+import { clusterOverview } from "./cluster-overview.js";
 import { type CompletionShell, renderCompletion } from "./completion.js";
 import { dispatch } from "./dispatch.js";
 import { listOperations, operationCommands } from "./operations.js";
@@ -19,8 +20,9 @@ export const main = defineCommand({
         name: "operations",
         description: "List available operation commands",
       },
-      run() {
-        console.log(listOperations());
+      async run() {
+        const overview = await clusterOverview();
+        console.log(listOperations(overview));
       },
     }),
     skills: defineCommand({

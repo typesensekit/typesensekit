@@ -81,6 +81,12 @@ tsk search products --facet-by brand --max-facet-values 250 --per-page 0 --compa
 tsk collections list --compact     # doc counts, aliases, fields with facet/sort flags
 ```
 
+With a configured cluster, `tsk`, `tsk --help` and `tsk operations` also print
+this collection overview (one quick request, skipped silently if the cluster is
+unreachable; set `TSK_NO_OVERVIEW=1` to turn it off). Without `--json`,
+`--compact` search results are printed as valid JSON with one hit or facet
+value per line.
+
 Flat `--input` keys work too: `{"collection":"products","filter_by":"price:<100"}`
 is read as `{"collection":"products","params":{"q":"*","filter_by":"price:<100"}}`.
 

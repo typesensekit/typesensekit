@@ -118,23 +118,26 @@ export function operationHelp(name: string): string {
   return lines.join("\n");
 }
 
-export function groupHelp(prefix = ""): string {
+export function groupHelp(prefix = "", overview?: string): string {
   const matches = operations.filter(
     (operation) => !prefix || operation.name.startsWith(`${prefix}.`),
   );
   if (prefix)
     return [
       `${prefix} operations (dotted and space-separated commands both work):`,
+      ...(prefix === "collections"
+        ? [
+            "  Start here: tsk collections list --compact (doc counts, aliases, field flags)",
+          ]
+        : []),
       ...matches.map(
         (operation) => `  ${operation.name}\t${operation.summary}`,
       ),
       "Use tsk <operation> --help for inputs, flags and examples.",
-      ...(prefix === "collections"
-        ? ["Overview of every collection: tsk collections list --compact"]
-        : []),
     ].join("\n");
   return [
     QUICK_START,
+    ...(overview ? [overview] : []),
     `# Groups: ${[...new Set(operations.map((operation) => operation.name.split(".")[0]))].join(", ")}`,
     "# Other commands: tsk operations (list all operations), profile, skills, completion.",
   ].join("\n");

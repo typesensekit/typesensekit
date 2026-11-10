@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseInput, render } from "./output.js";
+import { parseInput, render, renderDense } from "./output.js";
 
 describe("cli output", () => {
   it("parses object input", () => {
@@ -90,4 +90,36 @@ it("reveals only the generated key when explicitly requested", () => {
     api_key: "[REDACTED]",
   });
   expect(key.api_key).toBe("other-secret");
+});
+
+it("renders dense JSON with scalars first and one list entry per line", () => {
+  const value = {
+    hits: [{ document: { id: "1" } }, { document: { id: "2" } }],
+    found: 2,
+    facet_counts: [
+      { counts: [{ count: 2, value: "a" }], field_name: "brand", stats: {} },
+    ],
+  };
+  const text = renderDense(value);
+  expect(JSON.parse(text)).toEqual(value);
+  expect(text).toBe(
+    [
+      "{",
+      '  "found": 2,',
+      '  "hits": [',
+      '    {"document":{"id":"1"}},',
+      '    {"document":{"id":"2"}}',
+      "  ],",
+      '  "facet_counts": [',
+      "    {",
+      '      "field_name": "brand",',
+      '      "stats": {},',
+      '      "counts": [',
+      '        {"count":2,"value":"a"}',
+      "      ]",
+      "    }",
+      "  ]",
+      "}",
+    ].join("\n"),
+  );
 });
