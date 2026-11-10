@@ -8,6 +8,7 @@ import {
 import { operationSpecificArgs } from "./operations.js";
 
 const names = new Set(operations.map((operation) => operation.name));
+const BUILTIN_COMMANDS = ["operations", "profile", "skills", "completion"];
 
 /** Resolve space-separated operation paths without changing flag values. */
 export function normalizeCommand(argv: string[]): string[] {
@@ -122,12 +123,16 @@ export async function dispatch(
       console.log(version);
       return;
     }
+    const builtin = BUILTIN_COMMANDS.includes(name);
     if (names.has(name)) {
       if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
         console.log(operationHelp(name));
         return;
       }
     } else if (
+      // Built-ins win over same-named operation groups: `tsk operations`
+      // lists every operation, not just the operations.* group.
+      !builtin &&
       operations.some((operation) => operation.name.startsWith(`${name}.`))
     ) {
       if (
@@ -142,9 +147,7 @@ export async function dispatch(
       }
       console.log(groupHelp(name));
       return;
-    } else if (
-      !["operations", "profile", "skills", "completion"].includes(name)
-    ) {
+    } else if (!builtin) {
       const suggestion = suggestCommand(name);
       throw new Error(
         `Unknown command: ${name}.${suggestion ? ` Did you mean tsk ${suggestion}?` : ""} Use tsk operations or tsk --help.`,

@@ -70,3 +70,25 @@ it("suggests nearby operations and groups", () => {
   expect(suggestCommand("documents.serch")).toBe("documents.search");
   expect(suggestCommand("unrelated")).toBeUndefined();
 });
+
+it("runs built-in commands instead of same-named operation groups", async () => {
+  const listed: unknown[] = [];
+  const main = defineCommand({
+    subCommands: {
+      operations: defineCommand({
+        args: { json: { type: "boolean" } },
+        run({ args }) {
+          listed.push(args.json ? "json" : "text");
+        },
+      }),
+    },
+  });
+  await dispatch(main, ["operations"], "1.0.0");
+  await dispatch(main, ["operations", "--json"], "1.0.0");
+  expect(listed).toEqual(["text", "json"]);
+  expect(process.exitCode).toBe(0);
+  // Operations in the operations.* group stay reachable in both forms.
+  expect(normalizeCommand(["operations", "snapshot"])).toEqual([
+    "operations.snapshot",
+  ]);
+});
