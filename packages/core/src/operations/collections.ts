@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fieldSummary, textFieldNames } from "./field-summary.js";
 import { api, collectionPath } from "./http.js";
 import type { Operation } from "./types.js";
 
@@ -78,6 +79,14 @@ const fieldLifecycleInputSchema = z
   })
   .passthrough();
 
+const dropFieldInputSchema = z
+  .object({
+    collection: z.string().describe("Collection name."),
+    field: z.string().optional().describe("Field name."),
+    yes: z.boolean().optional(),
+  })
+  .passthrough();
+
 const waitInputSchema = z.object({
   collection: z.string(),
   fieldPresent: z.string().optional(),
@@ -123,7 +132,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function requestedFieldName(input: FieldLifecycleInput): string {
+function requestedFieldName(input: { field?: string; name?: unknown }): string {
   const name = input.field ?? input.name;
   if (typeof name !== "string" || !name) {
     throw new Error(
@@ -140,7 +149,10 @@ function requiresConfirmation(collection: string): boolean {
   );
 }
 
-function assertDestructiveConfirmed(input: FieldLifecycleInput): void {
+function assertDestructiveConfirmed(input: {
+  collection: string;
+  yes?: boolean;
+}): void {
   if (requiresConfirmation(input.collection) && !input.yes) {
     throw new Error(
       `Refusing to modify production collection ${input.collection} without --yes.`,
@@ -319,7 +331,7 @@ async function waitForCollectionCondition(
 
 async function dropField(
   client: Parameters<Operation<z.ZodTypeAny, unknown>["execute"]>[0],
-  input: FieldLifecycleInput,
+  input: z.infer<typeof dropFieldInputSchema>,
 ) {
   assertDestructiveConfirmed(input);
   const fieldName = requestedFieldName(input);
@@ -366,31 +378,75 @@ async function addField(
   };
 }
 
-/** Discovery projection only; full schemas remain available through retrieve/list. */
-function projectCollection(value: unknown): unknown {
+function stringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
+
+/**
+ * Discovery projection only; full schemas remain available through
+ * retrieve/list. Fields become `name: type [non-default flags]` strings and
+ * empty settings are left out to keep the overview small.
+ */
+function projectCollection(value: unknown, aliases: string[]): unknown {
   if (!isObject(value)) return value;
-  const keys = [
-    "name",
-    "num_documents",
-    "default_sorting_field",
-    "synonym_sets",
-    "curation_sets",
-  ];
-  const result = Object.fromEntries(
-    keys.filter((key) => key in value).map((key) => [key, value[key]]),
-  );
+  const result: Record<string, unknown> = {
+    name: value.name,
+    num_documents: value.num_documents,
+  };
+  if (aliases.length) result.aliases = aliases;
+  if (
+    typeof value.default_sorting_field === "string" &&
+    value.default_sorting_field
+  )
+    result.default_sorting_field = value.default_sorting_field;
+  for (const key of ["synonym_sets", "curation_sets"]) {
+    const sets = stringList(value[key]);
+    if (sets.length) result[key] = sets;
+  }
+  if (value.enable_nested_fields === true) result.enable_nested_fields = true;
   if (Array.isArray(value.fields)) {
-    result.fields = value.fields.map((field) =>
-      isObject(field)
-        ? Object.fromEntries(
-            ["name", "type", "facet", "sort", "index", "optional"]
-              .filter((key) => key in field)
-              .map((key) => [key, field[key]]),
-          )
-        : field,
-    );
+    const text = textFieldNames(value);
+    if (text.length) result.text_fields = text.join(",");
+    result.fields = value.fields.map(fieldSummary);
   }
   return result;
+}
+
+async function compactCollections(
+  client: Parameters<Operation<z.ZodTypeAny, unknown>["execute"]>[0],
+) {
+  const [collections, aliasList] = await Promise.all([
+    api(client).get<unknown[]>("/collections"),
+    api(client).get<{ aliases?: unknown[] }>("/aliases"),
+  ]);
+  const byCollection = new Map<string, string[]>();
+  for (const alias of aliasList.aliases ?? []) {
+    if (!isObject(alias)) continue;
+    const { name, collection_name: target } = alias;
+    if (typeof name !== "string" || typeof target !== "string") continue;
+    byCollection.set(target, [...(byCollection.get(target) ?? []), name]);
+  }
+  const names = new Set(
+    collections.map((collection) =>
+      isObject(collection) ? collection.name : undefined,
+    ),
+  );
+  const dangling = (aliasList.aliases ?? []).filter(
+    (alias) => isObject(alias) && !names.has(alias.collection_name),
+  );
+  return {
+    collections: collections.map((collection) =>
+      projectCollection(
+        collection,
+        isObject(collection)
+          ? (byCollection.get(String(collection.name)) ?? [])
+          : [],
+      ),
+    ),
+    ...(dangling.length ? { aliases: dangling } : {}),
+  };
 }
 
 export const collectionOperations = [
@@ -414,21 +470,12 @@ export const collectionOperations = [
     name: "collections.list",
     summary: "List collections",
     description:
-      "Discover collections. Prefer compact:true: returns {collections, aliases} with names, counts, field name/type/facet/sort/index/optional flags, default_sorting_field and linked synonym/curation sets. Default: full schema array. collections.retrieve gives omitted schema details.",
+      "Discover collections. Prefer compact:true: per collection num_documents, aliases, default_sorting_field, linked synonym/curation sets, text_fields (indexed string fields for query_by) and fields as `name: type [flags]`. Flags list only non-defaults: facet (usable in facet_by), sort (sort_by), index:false (not searchable/filterable/facetable/sortable), optional. Default: full schema array; collections.retrieve gives full details.",
     category: "collections",
     input: z.object({ compact: z.boolean().optional() }),
     execute: async (client, input) => {
       if (!input.compact) return api(client).get("/collections");
-      const [collections, aliases] = await Promise.all([
-        api(client).get<unknown[]>("/collections"),
-        api(client).get<{ aliases: unknown[] }>("/aliases"),
-      ]);
-      return {
-        collections: collections.map((collection) =>
-          projectCollection(collection),
-        ),
-        aliases: aliases.aliases,
-      };
+      return compactCollections(client);
     },
   },
   {
@@ -480,14 +527,14 @@ export const collectionOperations = [
     description:
       "Drop one field from a collection schema (documents keep their stored values; the field is just no longer indexed).",
     category: "collections",
-    input: fieldLifecycleInputSchema,
+    input: dropFieldInputSchema,
     execute: dropField,
   },
   {
     name: "collections.fields.replace",
     summary: "Safely replace a collection field",
     description:
-      "Change an existing field's definition (e.g. make it facetable, sortable, indexed or optional): drops the field and re-adds it with exactly the flags you pass (omitted flags revert to defaults; type defaults to the current type), then waits until it is applied. Typesense re-indexes the stored values, so no export/import is needed. Returns before/after definitions.",
+      "Change an existing field's definition (e.g. make it facetable, sortable, indexed or optional): drops the field and re-adds it with exactly the flags you pass, so also pass its other non-default flags (shown by compact collections.list); omitted flags revert to defaults and type defaults to the current type. Waits until applied; Typesense re-indexes the stored values, so no export/import is needed. Returns before/after definitions and num_documents.",
     category: "collections",
     input: fieldLifecycleInputSchema,
     execute: async (client, input) => {
@@ -541,6 +588,8 @@ export const collectionOperations = [
         field: fieldName,
         before: "before" in dropResult ? dropResult.before : undefined,
         after: findField(collection, fieldName),
+        num_documents: (collection as { num_documents?: unknown })
+          .num_documents,
         wait: waitResult,
       };
     },

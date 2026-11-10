@@ -45,7 +45,13 @@ export function operationDescription(operation: {
 }
 
 export {
+  collectionFieldsHint,
+  fieldSummary,
+  textFieldNames,
+} from "./field-summary.js";
+export {
   compactSearchResult,
+  FILTER_BY_HELP,
   searchParamsSchema,
 } from "./search-params.js";
 export type { Operation } from "./types.js";
