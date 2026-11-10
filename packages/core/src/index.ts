@@ -13,9 +13,13 @@ export {
 } from "./errors.js";
 export { isDestructiveOperation } from "./operation-safety.js";
 export {
+  collectionFieldsHint,
   compactSearchResult,
+  FILTER_BY_HELP,
+  fieldSummary,
   type Operation,
   operationDescription,
   operations,
+  textFieldNames,
 } from "./operations/index.js";
 export { redactSecrets } from "./redaction.js";

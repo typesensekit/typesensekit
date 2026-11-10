@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   formatMcpError,
   mcpErrorHint,
+  schemaFieldsHint,
   serverInstructions,
 } from "./guidance.js";
 
@@ -53,6 +54,24 @@ describe("MCP error hints", () => {
     ).toContain("sort: true");
   });
 
+  it("explains non-indexed fields and keeps other flags on replace", () => {
+    const message =
+      "Field `area` is marked as a non-indexed field in the schema.";
+    expect(mcpErrorHint(message, read)).toContain("has index: false");
+    expect(mcpErrorHint(message, read)).not.toContain("fields.replace");
+    expect(
+      mcpErrorHint(message, { ...read, readOnly: false, fieldsListed: true }),
+    ).toBe(
+      "`area` has index: false, so it cannot be searched (query_by), filtered, faceted or sorted; leave it out of the request. Check the fields below. To index it, use collections.fields.replace with index: true plus the field's other non-default flags.",
+    );
+    expect(
+      mcpErrorHint("No search fields specified for the query.", {
+        ...read,
+        fieldsListed: true,
+      }),
+    ).toContain("(text fields below)");
+  });
+
   it("explains missing query_by, page caps and unknown collections", () => {
     expect(
       mcpErrorHint("No search fields specified for the query.", read),
@@ -70,6 +89,55 @@ describe("MCP error hints", () => {
     expect(formatMcpError("Collection not found", read)).toMatch(
       /^Collection not found\nHint: /,
     );
+  });
+});
+
+describe("schema field hints", () => {
+  const schema = {
+    name: "products",
+    fields: [
+      { name: "name", type: "string" },
+      { name: "brand", type: "string", facet: true },
+      { name: "area", type: "string", index: false },
+    ],
+  };
+  const clientFor = (get: ReturnType<typeof vi.fn>) =>
+    ({ apiCall: { get } }) as unknown as Parameters<typeof schemaFieldsHint>[2];
+
+  it("lists the collection's fields for field errors", async () => {
+    const get = vi.fn().mockResolvedValue(schema);
+    await expect(
+      schemaFieldsHint(
+        "Could not find a facet field named `category` in the schema.",
+        read,
+        clientFor(get),
+      ),
+    ).resolves.toBe(
+      "Fields of products: name: string; brand: string [facet]; area: string [index:false].\nText fields for query_by: name,brand.",
+    );
+    expect(get).toHaveBeenCalledWith("/collections/products");
+  });
+
+  it("skips other errors, missing collections and failed lookups", async () => {
+    const get = vi.fn().mockRejectedValue(new Error("down"));
+    await expect(
+      schemaFieldsHint("Collection not found", read, clientFor(get)),
+    ).resolves.toBeUndefined();
+    await expect(
+      schemaFieldsHint(
+        "No search fields specified for the query.",
+        { ...read, input: {} },
+        clientFor(get),
+      ),
+    ).resolves.toBeUndefined();
+    expect(get).not.toHaveBeenCalled();
+    await expect(
+      schemaFieldsHint(
+        "No search fields specified for the query.",
+        read,
+        clientFor(get),
+      ),
+    ).resolves.toBeUndefined();
   });
 });
 
