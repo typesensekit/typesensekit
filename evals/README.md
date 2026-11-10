@@ -21,9 +21,8 @@ pnpm eval --dry-run
 # Free: tool-surface stats per interface (tool count, definition size, ...).
 pnpm eval --inspect
 
-# Smoke run: a few tasks per interface on Haiku.
-export ANTHROPIC_API_KEY=...
-pnpm eval -i both -m claude-haiku-5-5 -t discovery.count-books,search.find-by-name,debug.facet-category,write.create-alias
+# Smoke run: a few tasks per interface on Haiku (see Auth below).
+pnpm eval -i both -m claude-haiku-5-5 -t discovery.count-books,search.find-by-name,facets.top-brand,debug.facet-category,write.create-alias
 
 # Full benchmark: 48 tasks × 2 interfaces × 3 models, 3 repetitions, 4 parallel clusters.
 pnpm eval -i both -r 3 -c 4 --yes
@@ -41,6 +40,26 @@ Each run writes `evals/results/<run-id>/` (gitignored):
 `pnpm eval --report evals/results/<run-id>` rebuilds the summary from
 `attempts.jsonl`, for example after changing the report code.
 
+## Auth
+
+`--auth auto` (the default) uses the first of these that is set. Your
+`ANTHROPIC_BASE_URL` is passed along too, if set.
+
+1. `ANTHROPIC_API_KEY`
+2. `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token` (uses your Claude plan)
+3. `ANTHROPIC_AUTH_TOKEN` (bearer token, e.g. for a gateway)
+
+These are passed as env vars, so sessions keep their isolated temp HOME.
+
+`--auth claude-login` reuses the Claude Code login in your OS keychain
+(`claude auth status`). Sessions then run with your real HOME, but filesystem
+settings, CLAUDE.md, skills, and your MCP servers are still not loaded, and
+`tsk` always gets a private HOME. Force a source with `--auth api-key`,
+`oauth-token`, or `auth-token`.
+
+Reported costs are list-price equivalents computed by Claude Code. With a
+subscription token, usage counts against your plan's limits instead.
+
 ## Options
 
 ```
@@ -51,6 +70,7 @@ Each run writes `evals/results/<run-id>/` (gitignored):
 -r, --reps        repetitions per task (default 1)
 -c, --concurrency parallel workers, each with its own Docker cluster (default 1)
 --max-turns 25  --max-budget 1.00 (USD per attempt)  --timeout 300 (s)  --effort <level>
+--auth auto | api-key | oauth-token | auth-token | claude-login
 --typesense-url / --typesense-api-key / --allow-wipe   use an existing (wiped!) cluster
 --dry-run  --inspect  --list  --report <dir>  -y/--yes  --results <dir>
 ```
@@ -74,8 +94,9 @@ the worst case (`attempts × --max-budget`) before anything starts.
    - `settingSources: []`, no skills, `strictMcpConfig`, `persistSession: false`
    - a neutral system prompt that asks for a final `FINAL ANSWER: <value>` line
 
-   Your own Claude settings, CLAUDE.md files, MCP servers, and login are never
-   loaded. The key comes only from `ANTHROPIC_API_KEY`.
+   Your own Claude settings, CLAUDE.md files, and MCP servers are never
+   loaded. Credentials come only from the env vars described under Auth,
+   unless you pass `--auth claude-login`.
    - **MCP arms** see only the server's tools, plus `ListMcpResourcesTool` /
      `ReadMcpResourceTool` when `allowResources` is set. They have no built-in
      file or shell tools. `alwaysLoadTools` (default true) disables tool-search
@@ -118,6 +139,7 @@ the report.
 | `toolCalls`, `discoveryCalls` | all calls; CLI calls that only ran `operations`/`--help`/`--schema`/`--examples` |
 | `toolErrors` and `errorsByKind` | `invalid_args` (schema, JSON, or flag validation before reaching Typesense), `typesense` (cluster rejected the request), `unknown_tool` (unknown or unavailable op, which signals a wrong tool choice), `denied` (sandbox), `other`. Regexes in `src/metrics.ts`; interfaces can add their own via `errorPatterns`. |
 | `duplicateCalls` | the same tool with identical arguments called again |
+| `unknownOpCalls` | calls that referenced an operation the interface does not have, e.g. a guessed `tsk collections retrieve` or `tsk alias --help`. CLI ops are checked against the `opsListCommand` output (`tsk operations`), loaded once per run. Errors from these calls count as `unknown_tool`. |
 | `alternateToolMixes` | the attempt used more than one op from an interface's `toolGroups`, e.g. both `search` and `documents.search` |
 | `opsUsed` | op histogram. Names are canonicalized (`documents.search` becomes `documents_search`) because Claude Code renames dotted MCP tools that way. |
 | tokens, `costUsd`, `wallMs` | from the SDK result (`usage`, `total_cost_usd`) and wall clock |

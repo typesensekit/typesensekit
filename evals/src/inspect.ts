@@ -186,6 +186,32 @@ export async function inspectCli(
   }
 }
 
+/** Runs the CLI's `opsListCommand` and returns the operation names it lists. */
+export async function loadCliOps(
+  config: CliInterfaceConfig,
+  ts: TypesenseHttp,
+): Promise<string[]> {
+  const [command] = Object.keys(config.commands);
+  if (!command || !config.opsListCommand) return [];
+  const bin = mkdtempSync(join(tmpdir(), "tsk-eval-ops-"));
+  try {
+    const env = {
+      ...prepareCliShell(config, "read-only", templateVars(ts), bin),
+      HOME: bin,
+    };
+    const { stdout } = await exec(join(bin, command), config.opsListCommand, {
+      env,
+      timeout: 30_000,
+    });
+    return stdout
+      .split("\n")
+      .map((line) => /^([A-Za-z][\w.-]*)(?:\s|$)/.exec(line.trim())?.[1])
+      .filter((name): name is string => Boolean(name));
+  } finally {
+    rmSync(bin, { recursive: true, force: true });
+  }
+}
+
 export async function inspectInterface(
   config: InterfaceConfig,
   mode: Mode,

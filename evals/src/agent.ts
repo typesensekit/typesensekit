@@ -17,6 +17,7 @@ import {
   query,
   type SDKMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import type { ResolvedAuth } from "./auth.js";
 import {
   buildMcpServer,
   type InterfaceConfig,
@@ -50,7 +51,7 @@ export type AgentSettings = {
   maxBudgetUsd: number;
   timeoutMs: number;
   effort?: EffortLevel;
-  apiKey: string;
+  auth: ResolvedAuth;
 };
 
 export type AgentSession = {
@@ -115,12 +116,15 @@ export function startAgent(params: {
   const vars = templateVars(params.ts);
   const env: Record<string, string> = {
     PATH: process.env.PATH ?? "/usr/bin:/bin",
-    HOME: home,
-    CLAUDE_CONFIG_DIR: join(home, ".claude"),
+    // claude-login must see the real HOME/config dir to find the keychain
+    // login; every other mode gets a throwaway HOME.
+    ...(settings.auth.isolateHome
+      ? { HOME: home, CLAUDE_CONFIG_DIR: join(home, ".claude") }
+      : { HOME: process.env.HOME ?? home }),
     TMPDIR: root,
     LANG: "en_US.UTF-8",
     SHELL: "/bin/bash",
-    ANTHROPIC_API_KEY: settings.apiKey,
+    ...settings.auth.env,
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
     DISABLE_AUTOUPDATER: "1",
     CLAUDE_AGENT_SDK_CLIENT_APP: "typesensekit-evals/0.0.0",

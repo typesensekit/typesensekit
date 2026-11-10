@@ -44,7 +44,8 @@ export const DEFAULT_ERROR_PATTERNS: [ErrorKind, RegExp][] = [
   ],
   [
     "typesense",
-    /Typesense|\b(?:400|401|403|404|409|422|500|503)\b|Could not find|Request failed|Not Found|Bad Request|ObjectNotFound|ObjectUnprocessable|RequestMalformed|Cannot (?:filter|sort|facet)/i,
+    // Specific on purpose: a bare "Typesense" also appears in CLI help banners.
+    /Request failed with HTTP code|Server said:|Typesense \d{3}|\bHTTP (?:code |status )?\d{3}\b|Could not find|Collection not found|ObjectNotFound|ObjectUnprocessable|RequestMalformed|Cannot (?:filter|sort|facet)|No search fields/i,
   ],
 ];
 
@@ -107,14 +108,23 @@ export function canonicalOp(op: string): string {
   return op.replace(/[^A-Za-z0-9_-]/g, "_");
 }
 
+export type CallOps = {
+  /** Valid operations the call ran (canonicalized). */
+  ops: string[];
+  /** Operations the call referenced that the interface does not have. */
+  unknownOps: string[];
+  discovery: boolean;
+};
+
 export function opsForCall(
   tool: string,
   input: unknown,
   config: InterfaceConfig,
-): { ops: string[]; discovery: boolean } {
+): CallOps {
   if (tool.startsWith(MCP_TOOL_PREFIX)) {
     return {
       ops: [canonicalOp(tool.slice(MCP_TOOL_PREFIX.length))],
+      unknownOps: [],
       discovery: false,
     };
   }
@@ -124,27 +134,40 @@ export function opsForCall(
     const discoveryPattern = config.discoveryPattern
       ? new RegExp(config.discoveryPattern)
       : null;
+    const known = config.validOps
+      ? new Set(
+          [...config.validOps, ...(config.builtinCommands ?? [])].map(
+            canonicalOp,
+          ),
+        )
+      : null;
     const ops: string[] = [];
+    const unknownOps: string[] = [];
     let interfaceSegments = 0;
     let discoverySegments = 0;
     for (const segment of commandSegments(command)) {
       const program = segment.split(/\s+/)[0] ?? "";
       if (!(program in config.commands)) continue;
       interfaceSegments++;
+      const match = opPattern?.exec(segment);
+      const op = match?.[1] ? canonicalOp(match[1]) : undefined;
+      // A guessed op that does not exist is a wrong tool choice, even in a
+      // --help/--schema call.
+      if (op && known && !known.has(op)) unknownOps.push(op);
       if (discoveryPattern?.test(segment)) {
         discoverySegments++;
         continue;
       }
-      const match = opPattern?.exec(segment);
-      if (match?.[1]) ops.push(canonicalOp(match[1]));
+      if (op && !unknownOps.includes(op)) ops.push(op);
     }
     return {
       ops,
+      unknownOps,
       discovery:
         interfaceSegments > 0 && discoverySegments === interfaceSegments,
     };
   }
-  return { ops: [tool], discovery: false };
+  return { ops: [tool], unknownOps: [], discovery: false };
 }
 
 export type TranscriptAnalysis = {
@@ -153,6 +176,8 @@ export type TranscriptAnalysis = {
   alternateToolMixes: number;
   opsUsed: Record<string, number>;
   errorsByKind: Record<ErrorKind, number>;
+  /** Calls that referenced at least one nonexistent operation. */
+  unknownOpCalls: number;
 };
 
 export function analyzeTranscript(
@@ -193,17 +218,26 @@ export function analyzeTranscript(
     const use = uses.get(id) as ToolUseBlock;
     const result = results.get(id);
     const text = resultText(result?.content);
-    const { ops, discovery } = opsForCall(use.name, use.input, config);
+    const { ops, unknownOps, discovery } = opsForCall(
+      use.name,
+      use.input,
+      config,
+    );
     const key = `${use.name}:${stableStringify(use.input)}`;
     if (seen.has(key)) duplicateCalls++;
     seen.add(key);
     for (const op of ops) opsUsed[op] = (opsUsed[op] ?? 0) + 1;
     const isError = result?.is_error === true;
-    const errorKind = isError ? classifyError(text, config) : undefined;
+    const errorKind = isError
+      ? unknownOps.length > 0
+        ? "unknown_tool"
+        : classifyError(text, config)
+      : undefined;
     if (errorKind) errorsByKind[errorKind]++;
     return {
       tool: use.name,
       ops,
+      unknownOps,
       discovery,
       input: use.input,
       isError,
@@ -218,5 +252,12 @@ export function analyzeTranscript(
     if (used.length > 1) alternateToolMixes++;
   }
 
-  return { calls, duplicateCalls, alternateToolMixes, opsUsed, errorsByKind };
+  return {
+    calls,
+    duplicateCalls,
+    alternateToolMixes,
+    opsUsed,
+    errorsByKind,
+    unknownOpCalls: calls.filter((call) => call.unknownOps.length > 0).length,
+  };
 }

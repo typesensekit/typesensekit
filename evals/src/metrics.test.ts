@@ -73,6 +73,9 @@ describe("classifyError", () => {
         "Collection-level synonyms are unavailable for products. Use synonym_sets.list",
       ),
     ).toBe("unknown_tool");
+    expect(
+      classifyError("Exit code 1\nCLI for Typesense Admin API operations"),
+    ).toBe("other");
     expect(classifyError("something odd")).toBe("other");
   });
 
@@ -89,6 +92,7 @@ describe("opsForCall", () => {
   it("strips the MCP prefix", () => {
     expect(opsForCall("mcp__typesense__documents_search", {}, mcp)).toEqual({
       ops: ["documents_search"],
+      unknownOps: [],
       discovery: false,
     });
   });
@@ -110,16 +114,42 @@ describe("opsForCall", () => {
         { command: "tsk search --input '{}' | jq . && tsk health" },
         cli,
       ),
-    ).toEqual({ ops: ["search", "health"], discovery: false });
+    ).toEqual({ ops: ["search", "health"], unknownOps: [], discovery: false });
     expect(opsForCall("Bash", { command: "tsk search --schema" }, cli)).toEqual(
       {
         ops: [],
+        unknownOps: [],
         discovery: true,
       },
     );
     expect(opsForCall("Bash", { command: "jq --version" }, cli)).toEqual({
       ops: [],
+      unknownOps: [],
       discovery: false,
+    });
+  });
+
+  it("flags guessed CLI ops that do not exist, even in help calls", () => {
+    const known = {
+      ...cli,
+      validOps: ["collections.retrieve", "documents.search"],
+      builtinCommands: ["operations"],
+    };
+    expect(
+      opsForCall(
+        "Bash",
+        { command: "tsk collections retrieve books | jq . && tsk operations" },
+        known,
+      ),
+    ).toEqual({
+      ops: [],
+      unknownOps: ["collections"],
+      discovery: false,
+    });
+    expect(opsForCall("Bash", { command: "tsk alias --help" }, known)).toEqual({
+      ops: [],
+      unknownOps: ["alias"],
+      discovery: true,
     });
   });
 });
@@ -150,6 +180,24 @@ describe("analyzeTranscript", () => {
     expect(analysis.duplicateCalls).toBe(1);
     expect(analysis.alternateToolMixes).toBe(1);
     expect(analysis.opsUsed).toEqual({ search: 1, documents_search: 2 });
+  });
+
+  it("classifies errors from nonexistent CLI ops as wrong-tool", () => {
+    const known = { ...cli, validOps: ["collections.retrieve"] };
+    const analysis = analyzeTranscript(
+      [
+        use("1", "Bash", { command: "tsk collections retrieve books" }),
+        result(
+          "1",
+          "Exit code 1\nCLI for Typesense Admin API operations",
+          true,
+        ),
+      ],
+      known,
+    );
+    expect(analysis.unknownOpCalls).toBe(1);
+    expect(analysis.errorsByKind.unknown_tool).toBe(1);
+    expect(analysis.opsUsed).toEqual({});
   });
 
   it("ignores subagent messages", () => {

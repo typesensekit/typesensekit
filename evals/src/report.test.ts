@@ -30,6 +30,7 @@ function attempt(overrides: Partial<AttemptRecord>): AttemptRecord {
       other: 0,
     },
     duplicateCalls: 0,
+    unknownOpCalls: 0,
     alternateToolMixes: 0,
     opsUsed: { documents_search: 1 },
     errorSamples: [],

@@ -80,6 +80,8 @@ export type ToolCallRecord = {
   tool: string;
   /** Interface-level operation(s), e.g. `documents.search` or `tsk documents.search`. */
   ops: string[];
+  /** Referenced operations that do not exist (e.g. a guessed CLI subcommand). */
+  unknownOps: string[];
   /** Pure discovery/help calls (`--help`, `--schema`, `operations`, ...). */
   discovery: boolean;
   input: unknown;
@@ -120,6 +122,8 @@ export type AttemptRecord = {
   toolErrors: number;
   errorsByKind: Record<ErrorKind, number>;
   duplicateCalls: number;
+  /** Calls that referenced a nonexistent operation (wrong-tool guesses). */
+  unknownOpCalls: number;
   /** Calls to more than one tool from an interface-declared equivalence group. */
   alternateToolMixes: number;
   opsUsed: Record<string, number>;

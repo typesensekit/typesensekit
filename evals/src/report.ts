@@ -34,6 +34,7 @@ type CellStats = {
     unknownToolErrors: number;
     deniedCalls: number;
     duplicateCalls: number;
+    unknownOpCalls: number;
     alternateToolMixes: number;
     inputTokens: number;
     outputTokens: number;
@@ -132,6 +133,7 @@ export function buildSummary(
           unknownToolErrors: avg((a) => a.errorsByKind.unknown_tool),
           deniedCalls: avg((a) => a.errorsByKind.denied),
           duplicateCalls: avg((a) => a.duplicateCalls),
+          unknownOpCalls: avg((a) => a.unknownOpCalls ?? 0),
           alternateToolMixes: avg((a) => a.alternateToolMixes),
           inputTokens: avg(
             (a) => a.inputTokens + a.cacheReadTokens + a.cacheCreationTokens,
@@ -288,6 +290,7 @@ export function renderMarkdown(summary: Summary): string {
         "unknown tool",
         "denied",
         "dup calls",
+        "nonexistent-op calls",
         "alt-tool mixes",
         "input tok",
         "output tok",
@@ -310,6 +313,7 @@ export function renderMarkdown(summary: Summary): string {
         num(c.mean.unknownToolErrors, 2),
         num(c.mean.deniedCalls, 2),
         num(c.mean.duplicateCalls, 2),
+        num(c.mean.unknownOpCalls, 2),
         num(c.mean.alternateToolMixes, 2),
         num(c.mean.inputTokens, 0),
         num(c.mean.outputTokens, 0),

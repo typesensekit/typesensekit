@@ -164,18 +164,24 @@ export async function runAttempt(params: {
     toolErrors,
     errorsByKind: analysis.errorsByKind,
     duplicateCalls: analysis.duplicateCalls,
+    unknownOpCalls: analysis.unknownOpCalls,
     alternateToolMixes: analysis.alternateToolMixes,
     opsUsed: analysis.opsUsed,
     errorSamples: analysis.calls
       .filter((call) => call.isError)
       .slice(0, 8)
       .map((call) => ({
-        op: call.ops[0] ?? call.tool,
+        op:
+          call.ops[0] ??
+          (call.unknownOps[0]
+            ? `${call.unknownOps[0]} (nonexistent)`
+            : call.tool),
         kind: call.errorKind ?? "other",
+        // Skip the Bash "Exit code N" header so the sample shows the message.
         text:
           call.resultPreview
             .split("\n")
-            .find((line) => line.trim())
+            .find((line) => line.trim() && !/^Exit code \d+\s*$/.test(line))
             ?.slice(0, 200) ?? "",
       })),
     inputTokens: usage?.input_tokens ?? 0,

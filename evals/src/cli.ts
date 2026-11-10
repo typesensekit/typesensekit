@@ -10,6 +10,7 @@ import { parseArgs } from "node:util";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { tasks as allTasks, selectTasks } from "../tasks/index.js";
 import type { AgentSettings } from "./agent.js";
+import { AUTH_MODES, type AuthMode, resolveAuth } from "./auth.js";
 import {
   type Cluster,
   DEFAULT_IMAGE,
@@ -18,6 +19,7 @@ import {
   startCluster,
 } from "./docker.js";
 import { validateInterfaces, validateTasks } from "./dry-run.js";
+import { loadCliOps } from "./inspect.js";
 import {
   type InterfaceConfig,
   listInterfaces,
@@ -53,6 +55,13 @@ Agent limits (per attempt)
       --timeout <s>       default 300
       --effort <level>    low | medium | high | xhigh | max (default: model default)
 
+Auth
+      --auth <mode>       auto | api-key | oauth-token | auth-token | claude-login
+                          auto (default) uses the first of ANTHROPIC_API_KEY,
+                          CLAUDE_CODE_OAUTH_TOKEN (from \`claude setup-token\`), or
+                          ANTHROPIC_AUTH_TOKEN, plus ANTHROPIC_BASE_URL if set.
+                          claude-login reuses your Claude Code keychain login.
+
 Cluster
   -c, --concurrency <n>   parallel workers, one Docker cluster each (default: 1)
       --image <image>     default ${DEFAULT_IMAGE}
@@ -81,6 +90,7 @@ function parse() {
       "max-budget": { type: "string", default: "1" },
       timeout: { type: "string", default: "300" },
       effort: { type: "string" },
+      auth: { type: "string", default: "auto" },
       concurrency: { type: "string", short: "c", default: "1" },
       image: { type: "string", default: DEFAULT_IMAGE },
       "typesense-url": { type: "string" },
@@ -102,12 +112,17 @@ function parse() {
       throw new Error(`--${name} must be a positive integer`);
     return n;
   };
+  const auth = values.auth as AuthMode;
+  if (!AUTH_MODES.includes(auth)) {
+    throw new Error(`--auth must be one of ${AUTH_MODES.join(", ")}`);
+  }
   const effort = values.effort as EffortLevel | undefined;
   if (effort && !["low", "medium", "high", "xhigh", "max"].includes(effort)) {
     throw new Error(`--effort must be low, medium, high, xhigh, or max`);
   }
   return {
     ...values,
+    auth,
     models: (values.model ?? DEFAULT_MODELS.join(","))
       .split(",")
       .map((m) => m.trim())
@@ -282,12 +297,8 @@ async function runCommand(
   configs: InterfaceConfig[],
   tasks: Task[],
 ) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "ANTHROPIC_API_KEY is not set. Export it to run the benchmark, or use --dry-run to validate the pipeline without model calls.",
-    );
-  }
+  const auth = resolveAuth(args.auth);
+  console.log(`Auth: ${auth.description}`);
   checkBuilt(configs);
 
   type Job = {
@@ -347,6 +358,7 @@ async function runCommand(
       maxBudgetUsd: args.maxBudgetUsd,
       timeoutMs: args.timeoutMs,
       effort: args.effort ?? "default",
+      auth: auth.mode,
       tasks: args.tasks ?? "all",
     },
   };
@@ -359,6 +371,16 @@ async function runCommand(
     args,
     Math.min(args.concurrency, jobs.length),
   );
+  const [firstCluster] = clusters;
+  for (const config of configs) {
+    if (config.kind === "cli" && config.opsListCommand && !config.validOps) {
+      if (!firstCluster) break;
+      config.validOps = await loadCliOps(config, firstCluster.ts);
+      console.log(
+        `${config.name}: ${config.validOps.length} operations (used to spot calls to nonexistent ops)`,
+      );
+    }
+  }
   const attempts: AttemptRecord[] = [];
   let next = 0;
   let done = 0;
@@ -371,7 +393,7 @@ async function runCommand(
         maxBudgetUsd: args.maxBudgetUsd,
         timeoutMs: args.timeoutMs,
         effort: args.effort,
-        apiKey,
+        auth,
       };
       const transcriptPath = join(
         runDir,

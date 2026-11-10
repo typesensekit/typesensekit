@@ -13,6 +13,7 @@
  */
 import { type AgentSettings, startAgent } from "./agent.js";
 import { describeSpec, gradeAnswer } from "./answer.js";
+import { DRY_RUN_AUTH } from "./auth.js";
 import { inspectInterface } from "./inspect.js";
 import type { InterfaceConfig } from "./interfaces.js";
 import { resolveExpected } from "./runner.js";
@@ -95,7 +96,7 @@ export async function probeWiring(
     maxTurns: 1,
     maxBudgetUsd: 0.01,
     timeoutMs: 60_000,
-    apiKey: "sk-ant-dry-run-invalid-key-0000000000",
+    auth: DRY_RUN_AUTH,
   };
   const session = startAgent({
     prompt: "Reply with FINAL ANSWER: ok",

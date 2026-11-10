@@ -7,6 +7,7 @@
 import {
   chmodSync,
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   writeFileSync,
@@ -71,6 +72,16 @@ export type CliInterfaceConfig = InterfaceBase & {
   opPattern?: string;
   /** Regex marking a command segment as pure discovery/help. */
   discoveryPattern?: string;
+  /**
+   * Args that list the interface's operations, one per line with the name
+   * first (e.g. ["operations"]). Run once per eval run to fill `validOps`,
+   * so calls to guessed, nonexistent ops are counted as wrong-tool choices.
+   */
+  opsListCommand?: string[];
+  /** Valid operation names. Filled from `opsListCommand` at run time if unset. */
+  validOps?: string[];
+  /** Non-operation subcommands that are valid too (e.g. "operations"). */
+  builtinCommands?: string[];
 };
 
 export type InterfaceConfig = McpInterfaceConfig | CliInterfaceConfig;
@@ -226,12 +237,19 @@ export function prepareCliShell(
   vars: TemplateVars,
   binDir: string,
 ): Record<string, string> {
+  // Shimmed tools get a private HOME so they never read the user's real
+  // config (e.g. stored tsk profiles), whatever HOME the session has.
+  const toolHome = join(binDir, ".home");
+  mkdirSync(toolHome, { recursive: true });
   for (const [name, spec] of Object.entries(config.commands)) {
     const argv = [spec.command, ...(spec.args ?? [])].map((part) =>
       shellQuote(expand(part, vars)),
     );
     const path = join(binDir, name);
-    writeFileSync(path, `#!/bin/sh\nexec ${argv.join(" ")} "$@"\n`);
+    writeFileSync(
+      path,
+      `#!/bin/sh\nHOME=${shellQuote(toolHome)} XDG_CONFIG_HOME=${shellQuote(join(toolHome, ".config"))} exec ${argv.join(" ")} "$@"\n`,
+    );
     chmodSync(path, 0o755);
   }
   return {
