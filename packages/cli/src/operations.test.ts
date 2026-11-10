@@ -108,3 +108,13 @@ it("treats yes: true in --input JSON as confirmation", async () => {
     deleted: "/collections/products/documents/p1",
   });
 });
+
+it("accepts numeric key IDs positionally without an extra --input call", async () => {
+  const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  const command = operationCommands()["keys.retrieve"];
+  if (!command) throw new Error("Missing command");
+  await runCommand(command, { rawArgs: ["42", "--json"] });
+  expect(JSON.parse(String(output.mock.calls.at(-1)?.[0]))).toEqual({
+    name: "/keys/42",
+  });
+});

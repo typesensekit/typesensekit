@@ -4,6 +4,7 @@ import {
   redactSecrets,
 } from "@typesensekit/core";
 import { type CommandDef, runCommand, runMain } from "citty";
+import { clusterOverview } from "./cluster-overview.js";
 import {
   inputObjectSchema,
   type JsonSchemaLike,
@@ -196,7 +197,7 @@ export async function dispatch(
   const name = rawArgs[0] ?? "";
   try {
     if (!name || name === "--help" || name === "-h") {
-      console.log(groupHelp());
+      console.log(groupHelp("", await clusterOverview()));
       return;
     }
     if (name === "--version" || name === "-v") {
