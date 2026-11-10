@@ -105,9 +105,12 @@ the worst case (`attempts × --max-budget`) before anything starts.
      (`src/shell-guard.ts`) allows only `allowedCommands` (`tsk`, `jq`, `head`,
      `grep`, `cat`, …). Command substitution, process substitution, heredocs,
      and file redirection are allowed, with substituted commands checked
-     recursively. Files can be read and written only inside the session's
-     temp working directory. Env assignments, backgrounding, and paths that
-     leave the working directory (absolute, `~`, `..`) are blocked. `tsk` is a PATH shim to
+     recursively. Shell loops, conditionals, and variables work. Files can be
+     read and written only inside the session's temp working directory
+     (relative or absolute paths). Blocked: paths that leave it (`/tmp`,
+     `~`, `..`), backgrounding, setting protected variables (`PATH`,
+     `HOME`, `TYPESENSE_*`, …), and `sed`/`awk`, which can run commands or
+     write arbitrary files. `tsk` is a PATH shim to
      `packages/cli/dist/cli.js`, configured through `TYPESENSE_URL` /
      `TYPESENSE_API_KEY`. The agent has to discover usage itself with
      `tsk operations`, `--help`, `--schema`, and `--examples`.

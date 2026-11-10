@@ -7,7 +7,7 @@
  * allowlist (and the shell allowlist for CLI arms) independent of
  * permission mode.
  */
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -66,7 +66,9 @@ function allowedBuiltinTools(config: InterfaceConfig): string[] {
   return config.allowResources ? RESOURCE_TOOLS : [];
 }
 
-function guardHook(config: InterfaceConfig): HookCallback {
+function guardHook(config: InterfaceConfig, cwd: string): HookCallback {
+  // The session dir in every spelling (macOS: /var -> /private/var).
+  const roots = [...new Set([cwd, realpathSync(cwd)])];
   const builtins = new Set(allowedBuiltinTools(config));
   return async (input) => {
     if (input.hook_event_name !== "PreToolUse") return {};
@@ -92,7 +94,9 @@ function guardHook(config: InterfaceConfig): HookCallback {
       const command = String(
         (input.tool_input as { command?: unknown })?.command ?? "",
       );
-      const verdict = checkShellCommand(command, config.allowedCommands);
+      const verdict = checkShellCommand(command, config.allowedCommands, {
+        roots,
+      });
       if (!verdict.allowed) return deny(verdict.reason);
     }
     return allow;
@@ -158,7 +162,7 @@ export function startAgent(params: {
     permissionMode: "bypassPermissions",
     allowDangerouslySkipPermissions: true,
     hooks: {
-      PreToolUse: [{ hooks: [guardHook(config)], onFailure: "block" }],
+      PreToolUse: [{ hooks: [guardHook(config, cwd)], onFailure: "block" }],
     },
     maxTurns: settings.maxTurns,
     maxBudgetUsd: settings.maxBudgetUsd,

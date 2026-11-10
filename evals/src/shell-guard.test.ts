@@ -54,6 +54,36 @@ describe("checkShellCommand", () => {
     );
   });
 
+  it("treats the session directory as inside the sandbox", () => {
+    const roots = [
+      "/var/folders/x/T/tsk-eval-1/work",
+      "/private/var/folders/x/T/tsk-eval-1/work",
+    ];
+    const guarded = (command: string) =>
+      checkShellCommand(command, allowed, { roots });
+    expect(
+      guarded("tsk health > /private/var/folders/x/T/tsk-eval-1/work/out.json"),
+    ).toEqual({ allowed: true });
+    expect(guarded("cat /var/folders/x/T/tsk-eval-1/work/a.json")).toEqual({
+      allowed: true,
+    });
+    expect(guarded("cat /var/folders/x/T/tsk-eval-1/workother/a").allowed).toBe(
+      false,
+    );
+    expect(
+      guarded("cat /var/folders/x/T/tsk-eval-1/work/../../secret").allowed,
+    ).toBe(false);
+    expect(guarded("tsk health > /tmp/out.json").allowed).toBe(false);
+  });
+
+  it("allows shell variables but not protected ones", () => {
+    ok('ids=$(tsk collections.list --json | jq -r ".[].name"); echo "$ids"');
+    ok("LIMIT=250 tsk health");
+    blocked("PATH=. tsk health", /setting PATH/);
+    blocked("TYPESENSE_URL=http://evil tsk health", /setting TYPESENSE_URL/);
+    ok("for i in 1 2; do if tsk health; then break; fi; done");
+  });
+
   it("checks substituted commands recursively", () => {
     ok('tsk documents.search --input "$(cat query.json)"');
     ok("echo `tsk health`");
@@ -87,7 +117,6 @@ describe("checkShellCommand", () => {
     blocked("cat /etc/passwd", /outside the working directory/);
     blocked("head ../../secrets", /outside the working directory/);
     blocked("tsk health &", /background/);
-    blocked("TYPESENSE_URL=http://evil tsk health", /environment assignments/);
   });
 
   it("rejects malformed input", () => {

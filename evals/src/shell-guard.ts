@@ -31,18 +31,33 @@ const PREFIX_KEYWORDS = new Set([
   "{",
 ]);
 /** Keywords that form a whole segment on their own. */
-const CLOSING_KEYWORDS = new Set(["done", "fi", "}"]);
+const CLOSING_KEYWORDS = new Set(["done", "fi", "}", "break", "continue"]);
+
+/**
+ * Variables an assignment may not set: they would change how commands are
+ * resolved, where the CLI connects, or what the shell loads.
+ */
+const PROTECTED_VARIABLES =
+  /^(?:PATH|HOME|SHELL|ENV|BASH_ENV|IFS|CDPATH|PROMPT_COMMAND|TYPESENSE_\w*|LD_\w*|DYLD_\w*)$/;
+
+export type GuardOptions = {
+  /**
+   * Absolute directories that count as inside the sandbox (the session's
+   * working directory, in every spelling, e.g. /var and /private/var).
+   */
+  roots?: readonly string[];
+};
 
 type Parsed = { segments: string[][] } | { error: string };
 
 /** True for a path that stays inside the working directory. */
-function isSandboxPath(path: string): boolean {
+function isSandboxPath(path: string, options: GuardOptions): boolean {
   if (path === "/dev/null") return true;
-  return (
-    path.length > 0 &&
-    !path.startsWith("/") &&
-    !path.startsWith("~") &&
-    !path.split("/").includes("..")
+  if (path.length === 0 || path.startsWith("~")) return false;
+  if (path.split("/").includes("..")) return false;
+  if (!path.startsWith("/")) return true;
+  return (options.roots ?? []).some(
+    (root) => path === root || path.startsWith(`${root.replace(/\/$/, "")}/`),
   );
 }
 
@@ -69,6 +84,7 @@ function parse(
   command: string,
   allowed: readonly string[],
   depth: number,
+  options: GuardOptions,
 ): Parsed {
   if (depth > MAX_DEPTH) return { error: "too deeply nested substitution" };
   const segments: string[][] = [];
@@ -89,7 +105,7 @@ function parse(
     words = [];
   };
   const nested = (inner: string): string | undefined => {
-    const result = checkShellCommand(inner, allowed, depth + 1);
+    const result = checkShellCommand(inner, allowed, options, depth + 1);
     return result.allowed ? undefined : result.reason;
   };
 
@@ -259,7 +275,7 @@ function parse(
         else target += c;
         j++;
       }
-      if (!isSandboxPath(target)) {
+      if (!isSandboxPath(target, options)) {
         return {
           error: `redirection to "${target || "(nothing)"}" (only relative paths inside the working directory)`,
         };
@@ -280,10 +296,11 @@ function parse(
 export function checkShellCommand(
   command: string,
   allowedCommands: readonly string[],
+  options: GuardOptions = {},
   depth = 0,
 ): GuardResult {
   const allowedList = allowedCommands.join(", ");
-  const parsed = parse(command, allowedCommands, depth);
+  const parsed = parse(command, allowedCommands, depth, options);
   if ("error" in parsed) {
     return {
       allowed: false,
@@ -309,14 +326,27 @@ export function checkShellCommand(
     const head = segment[0];
     if (!head || CLOSING_KEYWORDS.has(head)) continue;
     const isFor = head === "for";
-    const [program, ...args] = isFor ? ["for", ...segment.slice(1)] : segment;
-    if (!program) continue;
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(program)) {
-      return {
-        allowed: false,
-        reason: `Blocked by sandbox: environment assignments are not allowed. Only these commands may run: ${allowedList}.`,
-      };
+    // Leading VAR=value words: shell variables, or env for one command.
+    let firstCommand = isFor ? 1 : 0;
+    if (!isFor) {
+      while (firstCommand < segment.length) {
+        const assignment = /^([A-Za-z_][A-Za-z0-9_]*)=/.exec(
+          segment[firstCommand] as string,
+        );
+        if (!assignment) break;
+        if (PROTECTED_VARIABLES.test(assignment[1] as string)) {
+          return {
+            allowed: false,
+            reason: `Blocked by sandbox: setting ${assignment[1]} is not allowed.`,
+          };
+        }
+        firstCommand++;
+      }
     }
+    const [program, ...args] = isFor
+      ? ["for", ...segment.slice(1)]
+      : segment.slice(firstCommand);
+    if (!program) continue;
     if (!isFor && !allowedCommands.includes(program)) {
       return {
         allowed: false,
@@ -326,7 +356,7 @@ export function checkShellCommand(
     for (const arg of args) {
       const pathLike =
         arg.startsWith("/") || arg.startsWith("~") || arg.includes("../");
-      if (pathLike && !isSandboxPath(arg)) {
+      if (pathLike && !isSandboxPath(arg, options)) {
         return {
           allowed: false,
           reason: `Blocked by sandbox: file paths outside the working directory ("${arg}") are not allowed.`,
