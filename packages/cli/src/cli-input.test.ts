@@ -128,3 +128,17 @@ it("maps --<field> flags onto input fields and rejects unknown options", () => {
     "Unexpected argument",
   );
 });
+
+it("turns extra flags on document writes into document fields", () => {
+  expect(
+    buildOperationInput(
+      "documents.update",
+      ["products", "p5", "--price", "79.99", "--tags", '["a"]', "--sku", "007"],
+      {},
+    ),
+  ).toEqual({
+    collection: "products",
+    id: "p5",
+    document: { price: 79.99, tags: ["a"], sku: "007" },
+  });
+});

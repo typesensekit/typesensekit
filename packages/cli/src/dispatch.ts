@@ -18,7 +18,23 @@ const names = new Set(operations.map((operation) => operation.name));
 const BUILTIN_COMMANDS = ["operations", "profile", "skills", "completion"];
 
 /** Resolve space-separated operation paths without changing flag values. */
+const groups = new Set(
+  operations.map((operation) => operation.name.split(".")[0] ?? ""),
+);
+
 export function normalizeCommand(argv: string[]): string[] {
+  // Singular group names resolve to their group: `tsk key create` = keys.create.
+  const [first] = argv;
+  const plural = [`${first}s`, `${first}es`].find((name) => groups.has(name));
+  if (
+    first &&
+    plural &&
+    !first.startsWith("-") &&
+    !groups.has(first) &&
+    !names.has(first) &&
+    !BUILTIN_COMMANDS.includes(first)
+  )
+    argv = [plural, ...argv.slice(1)];
   let best = 0;
   for (let size = 1; size <= argv.length; size++) {
     if (argv[size - 1]?.startsWith("-")) break;

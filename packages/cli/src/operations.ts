@@ -186,6 +186,15 @@ function baseArgs(operationName: string): ArgsDef {
   };
 }
 
+/** JSON numbers, booleans, null, arrays and objects; anything else stays a string. */
+function parseJsonValue(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 /** Required string inputs, in schema order, that may be given positionally. */
 export function positionalKeys(operationName: string): string[] {
   const operation = operations.find((entry) => entry.name === operationName);
@@ -248,6 +257,7 @@ export function buildOperationInput(
 
   const fromFlags: Record<string, unknown> = {};
   const params: Record<string, unknown> = {};
+  const documentFields: Record<string, unknown> = {};
   for (const { key, value } of parsed.flags) {
     const normalized = normalizeKey(key);
     // citty already parsed the CLI's own flags.
@@ -257,6 +267,9 @@ export function buildOperationInput(
       fromFlags[name] = coerceFlagValue(value, properties[name]);
     } else if (PARAMS_OPERATIONS.has(operationName)) {
       params[snakeCase(key)] = value === true ? true : value;
+    } else if (properties.document?.type === "object") {
+      // `tsk documents update products p1 --price 9.99` sets document fields.
+      documentFields[key] = value === true ? true : parseJsonValue(value);
     } else if (normalized !== "help" && normalized !== "h") {
       const options = [
         ...Object.keys(properties).map((entry) => `--${entry}`),
@@ -283,6 +296,13 @@ export function buildOperationInput(
     input.params = {
       ...(typeof existing === "object" && existing !== null ? existing : {}),
       ...params,
+    };
+  }
+  if (Object.keys(documentFields).length) {
+    const existing = input.document;
+    input.document = {
+      ...(typeof existing === "object" && existing !== null ? existing : {}),
+      ...documentFields,
     };
   }
   input = hoistParams(operationName, input, Object.keys(properties));

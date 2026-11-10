@@ -92,3 +92,11 @@ it("runs built-in commands instead of same-named operation groups", async () => 
     "operations.snapshot",
   ]);
 });
+
+it("resolves singular group names", () => {
+  expect(normalizeCommand(["key", "create", "--json"])).toEqual([
+    "keys.create",
+    "--json",
+  ]);
+  expect(normalizeCommand(["alias", "--help"])).toEqual(["aliases", "--help"]);
+});
