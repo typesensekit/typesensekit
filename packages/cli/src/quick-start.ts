@@ -13,10 +13,29 @@ export const QUICK_START = [
   "$ tsk documents get products <id>",
   "$ tsk documents export products --filter-by 'in_stock:=true' --include-fields id,price --format jsonl",
   '# Any operation also takes --input \'<JSON>\' (e.g. --input \'{"collection":"products","params":{"q":"*"}}\'). --compact gives dense output on any operation. Destructive writes need --yes.',
-  "# Schema repair: tsk collections fields replace --collection products --field brand --facet true --yes (re-indexes stored values; no export/import needed). Pass all flags to retain; omitted flags reset to defaults. Returns before/after.",
-  `# Saved searches: tsk presets retrieve <name>; tsk presets create <name> --value '{"query_by":"name,description"}' (create or replace).`,
-  `# Synonyms (v30+): tsk synonym_sets retrieve <set>; tsk synonym_sets items create <set> <id> --value '{"synonyms":["sofa","couch"]}'. Sets are linked in collection schemas.`,
-  "# Hidden/pinned hits: inspect the collection's curation_sets with tsk curation_sets retrieve <set>; --enable-overrides false bypasses rules for diagnosis. Bulk writes: documents import / update_by_filter / delete_by_filter / copy (--yes).",
-  "# Files: use inline --input JSON / --value JSON / --document JSON to avoid temp files. For backups: tsk documents export products --format jsonl > backup.jsonl (working directory).",
+  "# Recipes (tsk <group> --help): saved searches = presets; synonyms = synonym_sets; hidden/pinned results = curation_sets; field facet/sort/index fixes = collections; bulk edits/deletes/copies/backups = documents.",
   "# More: tsk <group> --help | tsk <operation> --help (inputs, flags, examples) | --schema",
 ].join("\n");
+
+/**
+ * Task recipes shown by `tsk <group> --help`. Kept out of QUICK_START, which
+ * every session reads, so only sessions that need a recipe pay for it.
+ */
+export const GROUP_RECIPES: Record<string, string[]> = {
+  collections: [
+    "Schema repair: tsk collections fields replace --collection products --field brand --facet true --yes (re-indexes stored values; no export/import needed). Pass all flags to retain; omitted flags reset to defaults. Returns before/after.",
+  ],
+  presets: [
+    `Saved searches: tsk presets retrieve <name>; tsk presets create <name> --value '{"query_by":"name,description"}' (create or replace).`,
+  ],
+  synonym_sets: [
+    `Synonyms (v30+): tsk synonym_sets retrieve <set>; tsk synonym_sets items create <set> <id> --value '{"synonyms":["sofa","couch"]}'. Sets are linked in collection schemas.`,
+  ],
+  curation_sets: [
+    "Hidden/pinned hits: inspect the collection's curation_sets with tsk curation_sets retrieve <set>; --enable-overrides false bypasses rules for diagnosis.",
+  ],
+  documents: [
+    "Bulk writes: documents import / update_by_filter / delete_by_filter / copy (--yes).",
+    "Files: use inline --input / --value / --document JSON to avoid temp files. Backups: tsk documents export products --format jsonl > backup.jsonl (working directory).",
+  ],
+};

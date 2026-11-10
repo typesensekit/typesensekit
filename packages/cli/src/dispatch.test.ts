@@ -41,9 +41,14 @@ it("shows focused help with usable inputs and output format instructions", () =>
   expect(operationHelp("synonym_sets.items.create")).toContain(
     '"value":{"synonyms":["sofa","couch"]}',
   );
-  expect(groupHelp()).toContain("presets create <name> --value");
-  expect(groupHelp()).toContain("omitted flags reset to defaults");
-  expect(groupHelp()).toContain("> backup.jsonl (working directory)");
+  // Task recipes live in group help, not in the cheat sheet every session reads.
+  expect(groupHelp("presets")).toContain("presets create <name> --value");
+  expect(groupHelp()).not.toContain("presets create <name> --value");
+  expect(groupHelp("collections")).toContain("fields replace");
+  expect(groupHelp("collections")).toContain("omitted flags reset to defaults");
+  expect(groupHelp("documents")).toContain(
+    "> backup.jsonl (working directory)",
+  );
   expect(operationHelp("collections.retrieve")).toContain(
     "collection (string, required, positional)",
   );

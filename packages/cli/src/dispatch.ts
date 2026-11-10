@@ -11,7 +11,7 @@ import {
   renderOperationExamples,
 } from "./operation-docs.js";
 import { operationSpecificArgs, positionalKeys } from "./operations.js";
-import { QUICK_START } from "./quick-start.js";
+import { GROUP_RECIPES, QUICK_START } from "./quick-start.js";
 
 export { QUICK_START };
 
@@ -150,6 +150,7 @@ export function groupHelp(prefix = "", overview?: string): string {
       ...matches.map(
         (operation) => `  ${operation.name}\t${operation.summary}`,
       ),
+      ...(GROUP_RECIPES[prefix] ?? []).map((recipe) => `Recipe: ${recipe}`),
       "Use tsk <operation> --help for inputs, flags and examples.",
     ].join("\n");
   return [
