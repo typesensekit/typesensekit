@@ -5,14 +5,30 @@ import {
 } from "@typesensekit/core";
 import { type ArgsDef, defineCommand } from "citty";
 import { ZodError } from "zod";
+import {
+  coerceFlagValue,
+  hoistParams,
+  normalizeKey,
+  PARAMS_OPERATIONS,
+  parseArgv,
+  SEARCH_OPERATIONS,
+  snakeCase,
+  unknownKeyHint,
+} from "./cli-input.js";
+import {
+  aliasesByCollection,
+  fieldsHint,
+  renderCollectionsCompact,
+} from "./collection-summary.js";
 import { confirmDestructiveOperation } from "./confirmation.js";
 import {
   inputObjectSchema,
   renderInputSchema,
   renderOperationExamples,
 } from "./operation-docs.js";
-import { parseInput, render } from "./output.js";
+import { parseInput, render, renderDense } from "./output.js";
 import { resolveClient } from "./profile/resolve.js";
+import { QUICK_START } from "./quick-start.js";
 
 function definedEntries(args: Record<string, unknown>) {
   return Object.fromEntries(
@@ -101,6 +117,239 @@ function operationSpecificInput(
   );
 }
 
+const COMPACT_COLLECTION_OPERATIONS = new Set([
+  "collections.list",
+  "collections.retrieve",
+]);
+
+function hasInputCompact(operationName: string): boolean {
+  const operation = operations.find((entry) => entry.name === operationName);
+  return Boolean(
+    operation &&
+      inputObjectSchema(operation.input).properties?.compact !== undefined,
+  );
+}
+
+/** Flags every operation command accepts (citty definitions). */
+function baseArgs(operationName: string): ArgsDef {
+  return {
+    ...(operationName === "documents.export"
+      ? {
+          format: {
+            type: "string" as const,
+            description:
+              "jsonl | array (default: JSON string; --json unchanged)",
+          },
+        }
+      : {}),
+    ...(COMPACT_COLLECTION_OPERATIONS.has(operationName)
+      ? {
+          compact: {
+            type: "boolean" as const,
+            description:
+              "Short overview: doc counts, aliases, and fields with type and facet/sort flags (JSON with --json)",
+          },
+        }
+      : hasInputCompact(operationName)
+        ? {}
+        : {
+            compact: {
+              type: "boolean" as const,
+              description:
+                "Dense output without --json: valid JSON with one list entry per line",
+            },
+          }),
+    input: {
+      type: "string",
+      description: "JSON object matching this operation input schema",
+    },
+    schema: {
+      type: "boolean",
+      description: "Print this operation input schema",
+    },
+    examples: {
+      type: "boolean",
+      description: "Print example invocations for this operation",
+    },
+    profile: { type: "string", description: "Profile name" },
+    config: { type: "string", description: "Profile config path" },
+    json: { type: "boolean", description: "Print JSON" },
+    yes: {
+      type: "boolean",
+      description: "Confirm a destructive operation without prompting",
+    },
+    debug: {
+      type: "boolean",
+      description: "Include redacted diagnostic details in errors",
+    },
+    ...operationSpecificArgs(operationName),
+  };
+}
+
+/** JSON numbers, booleans, null, arrays and objects; anything else stays a string. */
+function parseJsonValue(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+/** Required string inputs, in schema order, that may be given positionally. */
+export function positionalKeys(operationName: string): string[] {
+  const operation = operations.find((entry) => entry.name === operationName);
+  if (!operation) return [];
+  const schema = inputObjectSchema(operation.input);
+  return Object.entries(schema.properties ?? {})
+    .filter(
+      ([key, value]) =>
+        value.type === "string" &&
+        schema.required?.includes(key) &&
+        !(key in operationSpecificArgs(operationName)),
+    )
+    .map(([key]) => key);
+}
+
+/**
+ * Builds operation input from positionals, `--input` JSON and `--<field>`
+ * flags. Flags named after a top-level input field set that field; for search
+ * and export, other flags become Typesense parameters (`--filter-by x` sets
+ * params.filter_by).
+ */
+export function buildOperationInput(
+  operationName: string,
+  rawArgs: string[],
+  args: Record<string, unknown>,
+): Record<string, unknown> {
+  const operation = operations.find((entry) => entry.name === operationName);
+  if (!operation) throw new Error(`Unknown operation: ${operationName}`);
+  const schema = inputObjectSchema(operation.input);
+  const properties = schema.properties ?? {};
+  const cliArgs = baseArgs(operationName);
+  const cliFlag = new Map(
+    Object.entries(cliArgs).map(([key, value]) => [normalizeKey(key), value]),
+  );
+  const property = new Map(
+    Object.keys(properties).map((key) => [normalizeKey(key), key]),
+  );
+  const parsed = parseArgv(rawArgs, (key) => {
+    const normalized = normalizeKey(key);
+    const definition = cliFlag.get(normalized);
+    if (definition) return definition.type === "boolean";
+    const name = property.get(normalized);
+    return name !== undefined && properties[name]?.type === "boolean";
+  });
+
+  const keys = positionalKeys(operationName);
+  if (parsed.positionals.length > keys.length) {
+    const extra = parsed.positionals.slice(keys.length);
+    throw new Error(
+      `Unexpected argument${extra.length > 1 ? "s" : ""} for ${operationName}: ${extra.join(" ")}. ${
+        keys.length
+          ? `Positional arguments: ${keys.join(", ")}.`
+          : "This operation takes no positional arguments."
+      } Quote values that contain spaces.`,
+    );
+  }
+  const positional = Object.fromEntries(
+    parsed.positionals.map((value, index) => [keys[index], value]),
+  );
+
+  const fromFlags: Record<string, unknown> = {};
+  const params: Record<string, unknown> = {};
+  const documentFields: Record<string, unknown> = {};
+  for (const { key, value } of parsed.flags) {
+    const normalized = normalizeKey(key);
+    // citty already parsed the CLI's own flags.
+    if (cliFlag.has(normalized)) continue;
+    const name = property.get(normalized);
+    if (name !== undefined && name !== "params") {
+      fromFlags[name] = coerceFlagValue(value, properties[name]);
+    } else if (PARAMS_OPERATIONS.has(operationName)) {
+      params[snakeCase(key)] = value === true ? true : value;
+    } else if (properties.document?.type === "object") {
+      // `tsk documents update products p1 --price 9.99` sets document fields.
+      documentFields[key] = value === true ? true : parseJsonValue(value);
+    } else if (normalized !== "help" && normalized !== "h") {
+      const options = [
+        ...Object.keys(properties).map((entry) => `--${entry}`),
+        ...Object.keys(cliArgs).map((entry) => `--${entry}`),
+      ];
+      throw new Error(
+        `Unknown option --${key} for ${operationName}. Options: ${[...new Set(options)].join(", ")}.`,
+      );
+    }
+  }
+
+  const json = parseInput(args.input as string | undefined);
+  if (operationName === "documents.export" && "format" in json) {
+    args.format ??= json.format;
+    delete json.format;
+  }
+  let input: Record<string, unknown> = {
+    ...positional,
+    ...json,
+    ...fromFlags,
+  };
+  if (Object.keys(params).length) {
+    const existing = input.params;
+    input.params = {
+      ...(typeof existing === "object" && existing !== null ? existing : {}),
+      ...params,
+    };
+  }
+  if (Object.keys(documentFields).length) {
+    const existing = input.document;
+    input.document = {
+      ...(typeof existing === "object" && existing !== null ? existing : {}),
+      ...documentFields,
+    };
+  }
+  input = hoistParams(operationName, input, Object.keys(properties));
+  return {
+    ...input,
+    ...operationSpecificInput(operationName, args),
+  };
+}
+
+async function compactCollections(
+  client: Awaited<ReturnType<typeof resolveClient>>,
+  result: unknown,
+  json: boolean,
+): Promise<string> {
+  let aliases = new Map<string, string[]>();
+  try {
+    aliases = aliasesByCollection(await client.apiCall.get("/aliases"));
+  } catch {
+    // Keys without alias access still get the collection overview.
+  }
+  return renderCollectionsCompact(result, aliases, json);
+}
+
+/** Adds the collection's field list to errors about unknown or missing fields. */
+async function fieldErrorHint(
+  client: Awaited<ReturnType<typeof resolveClient>>,
+  error: unknown,
+  input: Record<string, unknown>,
+): Promise<string | undefined> {
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    typeof input.collection !== "string" ||
+    !/could not find a (?:\w+ )?field named|no search fields specified|not a (?:facet|sortable)|field .* (?:is not|isn't) (?:a )?(?:facet|sortable|indexed)/i.test(
+      message,
+    )
+  )
+    return undefined;
+  try {
+    const collection = await client.apiCall.get(
+      `/collections/${encodeURIComponent(input.collection)}`,
+    );
+    return fieldsHint(collection as Record<string, unknown>);
+  } catch {
+    return undefined;
+  }
+}
+
 export function operationCommands() {
   return Object.fromEntries(
     operations.map((operation) => [
@@ -109,57 +358,18 @@ export function operationCommands() {
         meta: { name: operation.name, description: operation.summary },
         args: {
           ...Object.fromEntries(
-            Object.entries(inputObjectSchema(operation.input).properties ?? {})
-              .filter(
-                ([key, schema]) =>
-                  schema.type === "string" &&
-                  inputObjectSchema(operation.input).required?.includes(key) &&
-                  !(key in operationSpecificArgs(operation.name)),
-              )
-              .map(([key]) => [
-                key,
-                {
-                  type: "positional" as const,
-                  required: false,
-                  description: `Input ${key} (or use --input)`,
-                },
-              ]),
+            positionalKeys(operation.name).map((key) => [
+              key,
+              {
+                type: "positional" as const,
+                required: false,
+                description: `Input ${key} (or use --input)`,
+              },
+            ]),
           ),
-          ...(operation.name === "documents.export"
-            ? {
-                format: {
-                  type: "string" as const,
-                  description:
-                    "jsonl | array (default: JSON string; --json unchanged)",
-                },
-              }
-            : {}),
-          input: {
-            type: "string",
-            description: "JSON object matching this operation input schema",
-          },
-          schema: {
-            type: "boolean",
-            description: "Print this operation input schema",
-          },
-          examples: {
-            type: "boolean",
-            description: "Print example invocations for this operation",
-          },
-          profile: { type: "string", description: "Profile name" },
-          config: { type: "string", description: "Profile config path" },
-          json: { type: "boolean", description: "Print JSON" },
-          yes: {
-            type: "boolean",
-            description: "Confirm a destructive operation without prompting",
-          },
-          debug: {
-            type: "boolean",
-            description: "Include redacted diagnostic details in errors",
-          },
-          ...operationSpecificArgs(operation.name),
+          ...baseArgs(operation.name),
         },
-        async run({ args }) {
+        async run({ args, rawArgs }) {
           if (args.schema) {
             console.log(renderInputSchema(operation.input));
             return;
@@ -171,22 +381,15 @@ export function operationCommands() {
             return;
           }
 
-          const positional = Object.fromEntries(
-            Object.keys(inputObjectSchema(operation.input).properties ?? {})
-              .filter(
-                (key) =>
-                  !(key in operationSpecificArgs(operation.name)) &&
-                  typeof args[key] === "string",
-              )
-              .map((key) => [key, args[key]]),
-          );
           let input: Record<string, unknown>;
+          let raw: Record<string, unknown> = {};
           try {
-            input = operation.input.parse({
-              ...positional,
-              ...parseInput(args.input),
-              ...operationSpecificInput(operation.name, args),
-            });
+            raw = buildOperationInput(
+              operation.name,
+              rawArgs,
+              args as Record<string, unknown>,
+            );
+            input = operation.input.parse(raw);
           } catch (error) {
             const detail =
               error instanceof ZodError
@@ -199,8 +402,17 @@ export function operationCommands() {
                 : error instanceof Error
                   ? error.message
                   : String(error);
+            const unknownKeys = unknownKeyHint(
+              raw,
+              Object.keys(inputObjectSchema(operation.input).properties ?? {}),
+            );
             throw new Error(
-              `Invalid input for ${operation.name}: ${detail}\n${renderOperationExamples(operation.name, operation.input)}\nUse tsk ${operation.name} --schema for the full input schema.`,
+              [
+                `Invalid input for ${operation.name}: ${detail}`,
+                ...(unknownKeys ? [unknownKeys] : []),
+                renderOperationExamples(operation.name, operation.input),
+                `Use tsk ${operation.name} --help for fields and flags.`,
+              ].join("\n"),
             );
           }
           if (
@@ -209,13 +421,26 @@ export function operationCommands() {
           ) {
             throw new Error("--format must be jsonl or array");
           }
-          await confirmDestructiveOperation(operation.name, input, args.yes);
+          await confirmDestructiveOperation(
+            operation.name,
+            input,
+            args.yes === true || raw.yes === true,
+          );
           const client = await resolveClient({
             profile: args.profile,
             config: args.config,
           });
           try {
             const result = await operation.execute(client, input);
+            if (
+              COMPACT_COLLECTION_OPERATIONS.has(operation.name) &&
+              args.compact
+            ) {
+              console.log(
+                await compactCollections(client, result, args.json === true),
+              );
+              return;
+            }
             if (operation.name === "documents.export" && args.format) {
               if (typeof result !== "string")
                 throw new Error("Expected JSONL export");
@@ -234,6 +459,16 @@ export function operationCommands() {
               );
               return;
             }
+            if (
+              !args.json &&
+              (args.compact === true ||
+                input.compact === true ||
+                (SEARCH_OPERATIONS.has(operation.name) &&
+                  (input.params as Record<string, unknown>)?.compact === true))
+            ) {
+              console.log(renderDense(result));
+              return;
+            }
             console.log(
               render(
                 result,
@@ -242,7 +477,9 @@ export function operationCommands() {
               ),
             );
           } catch (error) {
-            const hint = getTypesenseErrorHint(error, input);
+            const hint =
+              getTypesenseErrorHint(error, input) ??
+              (await fieldErrorHint(client, error, input));
             const message = formatTypesenseErrorMessage(error, {
               debug: args.debug,
             });
@@ -254,8 +491,11 @@ export function operationCommands() {
   );
 }
 
-export function listOperations(): string {
-  return operations
-    .map((operation) => `${operation.name}\t${operation.summary}`)
-    .join("\n");
+export function listOperations(overview?: string): string {
+  return [
+    QUICK_START,
+    ...(overview ? [overview] : []),
+    "# Operations (tsk <operation> --help for inputs, flags and examples):",
+    ...operations.map((operation) => `${operation.name}\t${operation.summary}`),
+  ].join("\n");
 }

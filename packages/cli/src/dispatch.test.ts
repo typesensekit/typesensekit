@@ -38,7 +38,7 @@ it("shows focused help with usable inputs and output format instructions", () =>
   expect(operationHelp("search")).toContain('"params":');
   expect(operationHelp("documents.export")).toContain("--format jsonl");
   expect(operationHelp("collections.retrieve")).toContain(
-    "collection (required)",
+    "collection (string, required, positional)",
   );
 });
 
@@ -91,4 +91,12 @@ it("runs built-in commands instead of same-named operation groups", async () => 
   expect(normalizeCommand(["operations", "snapshot"])).toEqual([
     "operations.snapshot",
   ]);
+});
+
+it("resolves singular group names", () => {
+  expect(normalizeCommand(["key", "create", "--json"])).toEqual([
+    "keys.create",
+    "--json",
+  ]);
+  expect(normalizeCommand(["alias", "--help"])).toEqual(["aliases", "--help"]);
 });

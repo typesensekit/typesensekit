@@ -9,17 +9,18 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-type JsonSchema = {
+export type JsonSchemaLike = {
+  description?: string;
   type?: string | string[];
   minimum?: number;
   exclusiveMinimum?: number;
   minItems?: number;
   default?: JsonValue;
   enum?: string[];
-  anyOf?: JsonSchema[];
-  items?: JsonSchema;
-  additionalProperties?: JsonSchema | boolean;
-  properties?: Record<string, JsonSchema>;
+  anyOf?: JsonSchemaLike[];
+  items?: JsonSchemaLike;
+  additionalProperties?: JsonSchemaLike | boolean;
+  properties?: Record<string, JsonSchemaLike>;
   required?: string[];
 };
 
@@ -112,8 +113,8 @@ const EXAMPLES: Record<string, JsonValue[]> = {
       collection: "products",
       params: {
         q: "*",
-        query_by: "title",
         filter_by: "price:<100",
+        sort_by: "price:asc",
         per_page: 20,
       },
     },
@@ -122,8 +123,8 @@ const EXAMPLES: Record<string, JsonValue[]> = {
     {
       collection: "products",
       params: {
-        q: "*",
-        query_by: "title",
+        q: "chair",
+        query_by: "name,description",
       },
     },
   ],
@@ -214,11 +215,11 @@ const EXAMPLES: Record<string, JsonValue[]> = {
   ],
 };
 
-export function inputObjectSchema(input: z.ZodTypeAny): JsonSchema {
+export function inputObjectSchema(input: z.ZodTypeAny): JsonSchemaLike {
   return zodToJsonSchema(input, {
     $refStrategy: "none",
     target: "jsonSchema7",
-  }) as JsonSchema;
+  }) as JsonSchemaLike;
 }
 
 export function renderInputSchema(input: z.ZodTypeAny): string {
@@ -240,7 +241,10 @@ export function renderOperationExamples(
     .join("\n");
 }
 
-function exampleFromSchema(schema: JsonSchema, propertyName = ""): JsonValue {
+function exampleFromSchema(
+  schema: JsonSchemaLike,
+  propertyName = "",
+): JsonValue {
   if (schema.default !== undefined) return schema.default;
   if (Array.isArray(schema.type))
     return exampleFromSchema({ ...schema, type: schema.type[0] }, propertyName);
