@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import {
   coerceFlagValue,
   hoistParams,
@@ -121,12 +121,21 @@ it("maps --<field> flags onto input fields and rejects unknown options", () => {
       {},
     ),
   ).toEqual({ collection: "products", filterBy: "in_stock:=false" });
-  expect(() =>
-    buildOperationInput("collections.list", ["--bogus", "1"], {}),
-  ).toThrow("Unknown option --bogus");
-  expect(() => buildOperationInput("aliases.retrieve", ["a", "b"], {})).toThrow(
-    "Unexpected argument",
+  // Unknown flags and extra arguments warn and are ignored, as before.
+  const warn = vi.spyOn(console, "error").mockImplementation(() => {});
+  expect(buildOperationInput("collections.list", ["--bogus", "1"], {})).toEqual(
+    {},
   );
+  expect(warn).toHaveBeenLastCalledWith(
+    expect.stringContaining("Ignoring unknown option --bogus"),
+  );
+  expect(buildOperationInput("aliases.retrieve", ["a", "b"], {})).toEqual({
+    name: "a",
+  });
+  expect(warn).toHaveBeenLastCalledWith(
+    expect.stringContaining("Ignoring unexpected argument"),
+  );
+  warn.mockRestore();
 });
 
 it("turns extra flags on document writes into document fields", () => {

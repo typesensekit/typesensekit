@@ -242,9 +242,11 @@ export function buildOperationInput(
 
   const keys = positionalKeys(operationName);
   if (parsed.positionals.length > keys.length) {
+    // Earlier versions silently ignored extra arguments, so warn instead of
+    // failing to keep existing scripts working.
     const extra = parsed.positionals.slice(keys.length);
-    throw new Error(
-      `Unexpected argument${extra.length > 1 ? "s" : ""} for ${operationName}: ${extra.join(" ")}. ${
+    warn(
+      `Ignoring unexpected argument${extra.length > 1 ? "s" : ""} for ${operationName}: ${extra.join(" ")}. ${
         keys.length
           ? `Positional arguments: ${keys.join(", ")}.`
           : "This operation takes no positional arguments."
@@ -252,7 +254,9 @@ export function buildOperationInput(
     );
   }
   const positional = Object.fromEntries(
-    parsed.positionals.map((value, index) => [keys[index], value]),
+    parsed.positionals
+      .slice(0, keys.length)
+      .map((value, index) => [keys[index], value]),
   );
 
   const fromFlags: Record<string, unknown> = {};
@@ -275,8 +279,9 @@ export function buildOperationInput(
         ...Object.keys(properties).map((entry) => `--${entry}`),
         ...Object.keys(cliArgs).map((entry) => `--${entry}`),
       ];
-      throw new Error(
-        `Unknown option --${key} for ${operationName}. Options: ${[...new Set(options)].join(", ")}.`,
+      // Earlier versions silently ignored unknown flags: warn, don't fail.
+      warn(
+        `Ignoring unknown option --${key} for ${operationName}. Options: ${[...new Set(options)].join(", ")}.`,
       );
     }
   }
@@ -491,11 +496,26 @@ export function operationCommands() {
   );
 }
 
-export function listOperations(overview?: string): string {
+/** `name<TAB>summary` per operation: the stable stdout of `tsk operations`. */
+export function listOperations(): string {
+  return operations
+    .map((operation) => `${operation.name}\t${operation.summary}`)
+    .join("\n");
+}
+
+/**
+ * Quick start and live cluster overview printed by `tsk operations` on
+ * stderr, so stdout stays the stable operation list that scripts parse
+ * while people and agents still see the guide.
+ */
+export function operationsGuide(overview?: string): string {
   return [
     QUICK_START,
     ...(overview ? [overview] : []),
     "# Operations (tsk <operation> --help for inputs, flags and examples):",
-    ...operations.map((operation) => `${operation.name}\t${operation.summary}`),
   ].join("\n");
+}
+
+function warn(message: string) {
+  console.error(`Warning: ${message}`);
 }

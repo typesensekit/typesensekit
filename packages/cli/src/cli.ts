@@ -3,7 +3,11 @@ import packageJson from "../package.json" with { type: "json" };
 import { clusterOverview } from "./cluster-overview.js";
 import { type CompletionShell, renderCompletion } from "./completion.js";
 import { dispatch } from "./dispatch.js";
-import { listOperations, operationCommands } from "./operations.js";
+import {
+  listOperations,
+  operationCommands,
+  operationsGuide,
+} from "./operations.js";
 import { profileCommand } from "./profile/commands.js";
 import { renderSkill, type SkillTarget } from "./skills.js";
 
@@ -22,7 +26,8 @@ export const main = defineCommand({
       },
       async run() {
         const overview = await clusterOverview();
-        console.log(listOperations(overview));
+        console.error(operationsGuide(overview));
+        console.log(listOperations());
       },
     }),
     skills: defineCommand({

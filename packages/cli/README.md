@@ -83,7 +83,9 @@ tsk collections list --compact     # doc counts, aliases, fields with facet/sort
 
 With a configured cluster, `tsk`, `tsk --help` and `tsk operations` also print
 this collection overview (one quick request, skipped silently if the cluster is
-unreachable; set `TSK_NO_OVERVIEW=1` to turn it off). Without `--json`,
+unreachable; set `TSK_NO_OVERVIEW=1` to turn it off). `tsk operations` prints
+the cheat sheet and overview on stderr, so its stdout stays one
+`name<TAB>summary` line per operation for scripts. Without `--json`,
 `--compact` search results are printed as valid JSON with one hit or facet
 value per line.
 
