@@ -1,4 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { toJsonSchemaCompat } from "@modelcontextprotocol/sdk/server/zod-json-schema-compat.js";
+import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import {
   createClient,
   formatTypesenseErrorMessage,
@@ -14,10 +16,21 @@ import {
   type McpExecutionController,
   sharedMcpExecutionController,
 } from "./execution.js";
-import { formatMcpError, serverInstructions } from "./guidance.js";
+import {
+  formatMcpError,
+  schemaFieldsHint,
+  serverInstructions,
+} from "./guidance.js";
 import { filterMcpOperations } from "./read-only.js";
 import { registerTypesenseResources } from "./resources.js";
 import { operationToolAnnotations } from "./tool-metadata.js";
+import {
+  advertisedTool,
+  type JsonSchema,
+  slimJsonSchema,
+} from "./tool-schema.js";
+
+const outputSchema = { result: z.unknown() };
 
 export type TypesenseMcpServerOptions = {
   readOnly?: boolean;
@@ -58,7 +71,7 @@ export function createTypesenseMcpServer(
         title: operation.name,
         description: operationDescription(operation),
         inputSchema: operation.input,
-        outputSchema: { result: z.unknown() },
+        outputSchema,
         annotations: operationToolAnnotations(operation),
       },
       async (args) => {
@@ -98,16 +111,55 @@ export function createTypesenseMcpServer(
             durationMs: Date.now() - startedAt,
             errorName: error instanceof Error ? error.name : "UnknownError",
           });
-          const message = formatMcpError(formatTypesenseErrorMessage(error), {
+          const context = {
             operation: operation.name,
             input: args,
             readOnly: mcpOptions.readOnly,
-          });
+          };
+          const raw = formatTypesenseErrorMessage(error);
+          const fields = await schemaFieldsHint(raw, context, client);
+          const message = [
+            formatMcpError(raw, { ...context, fieldsListed: Boolean(fields) }),
+            fields,
+          ]
+            .filter(Boolean)
+            .join("\n");
           return { isError: true, content: [{ type: "text", text: message }] };
         }
       },
     );
   }
 
+  advertiseCompactToolList(server, activeOperations);
   return server;
+}
+
+/**
+ * Serves tools/list with compact definitions (see tool-schema.ts). Calls are
+ * still validated by the full schemas registered above.
+ */
+function advertiseCompactToolList(
+  server: McpServer,
+  activeOperations: ReturnType<typeof filterMcpOperations>,
+) {
+  const outputJsonSchema = slimJsonSchema(
+    toJsonSchemaCompat(z.object(outputSchema)),
+  );
+  const tools = activeOperations.map((operation) => {
+    const { description, inputSchema } = advertisedTool(
+      operation.name,
+      operationDescription(operation),
+      toJsonSchemaCompat(operation.input) as JsonSchema,
+    );
+    return {
+      name: operation.name,
+      title: operation.name,
+      description,
+      inputSchema: inputSchema as { type: "object" },
+      outputSchema: outputJsonSchema as { type: "object" },
+      annotations: operationToolAnnotations(operation),
+    };
+  });
+  server.server.removeRequestHandler("tools/list");
+  server.server.setRequestHandler(ListToolsRequestSchema, () => ({ tools }));
 }
