@@ -107,12 +107,23 @@ const EXAMPLES: Record<string, JsonValue[]> = {
       ids: ["sku-1", "sku-2"],
     },
   ],
-  "documents.search": [
+  search: [
     {
-      collection: "production__products",
+      collection: "products",
       params: {
         q: "*",
-        query_by: "q",
+        query_by: "title",
+        filter_by: "price:<100",
+        per_page: 20,
+      },
+    },
+  ],
+  "documents.search": [
+    {
+      collection: "products",
+      params: {
+        q: "*",
+        query_by: "title",
       },
     },
   ],

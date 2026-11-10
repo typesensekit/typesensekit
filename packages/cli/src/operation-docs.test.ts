@@ -44,7 +44,7 @@ describe("operation docs", () => {
         operationInput("documents.search"),
       ),
     ).toContain(
-      `tsk documents.search --input '{"collection":"production__products","params":{"q":"*","query_by":"q"}}' --json`,
+      `tsk documents.search --input '{"collection":"products","params":{"q":"*","query_by":"title"}}' --json`,
     );
     expect(
       renderOperationExamples(
